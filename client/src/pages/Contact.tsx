@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'wouter';
-import { ChevronLeft, Mail, Phone, MessageSquare } from 'lucide-react';
+import { ChevronLeft, Shield, Mail, Phone, MessageSquare, ArrowRight } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Textarea } from '../components/ui/textarea';
@@ -23,20 +23,46 @@ const Contact: React.FC = () => {
     <div className="min-h-screen bg-primary-dark text-gray-100 font-sans antialiased">
       <GridBackground opacity={0.08} />
 
-      {/* Header */}
-      <header className="bg-primary-dark/90 border-b border-accent-blue/20 sticky top-0 z-50 backdrop-blur-md">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+      {/* Navbar */}
+      <nav className="fixed w-full bg-primary-dark/90 backdrop-blur-md z-50 border-b border-accent-blue/20">
+        <div className="container mx-auto px-4 py-3 flex justify-between items-center">
           <Link href="/">
-            <Button variant="ghost" className="text-accent-blue flex items-center gap-1">
-              <ChevronLeft className="h-4 w-4" />
-              Back to Home
-            </Button>
+            <div className="flex items-center space-x-2">
+              <Shield className="h-8 w-8 text-accent-blue" />
+              <span className="text-xl font-bold tracking-tight">SecureScan<span className="text-accent-blue">AI</span></span>
+            </div>
           </Link>
+          
+          <div className="hidden md:flex items-center space-x-8">
+            <Link href="/#features" className="text-gray-300 hover:text-accent-blue transition-colors">
+              Features
+            </Link>
+            <Link href="/#how-it-works" className="text-gray-300 hover:text-accent-blue transition-colors">
+              How it Works
+            </Link>
+            <Link href="/#pricing" className="text-gray-300 hover:text-accent-blue transition-colors">
+              Pricing
+            </Link>
+            <Link href="/blog" className="text-gray-300 hover:text-accent-blue transition-colors">
+              Blog
+            </Link>
+          </div>
+          
+          <div className="flex items-center space-x-4">
+            <Link href="/">
+              <Button 
+                variant="outline" 
+                className="border-accent-blue text-accent-blue hover:bg-accent-blue/10 hover:text-accent-blue transition-all hover:shadow-lg hover:shadow-accent-blue/20"
+              >
+                Back to Home
+              </Button>
+            </Link>
+          </div>
         </div>
-      </header>
+      </nav>
 
       {/* Content */}
-      <main className="container mx-auto px-4 py-12">
+      <main className="container mx-auto px-4 pt-28 pb-16">
         <div className="max-w-5xl mx-auto">
           <h1 className="text-3xl md:text-4xl font-bold mb-2">Contact Us</h1>
           <p className="text-lg text-gray-400 mb-12">Get in touch with our team</p>

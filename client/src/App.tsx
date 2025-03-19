@@ -7,6 +7,7 @@ import Home from "@/pages/Home";
 import TermsOfService from "@/pages/TermsOfService";
 import PrivacyPolicy from "@/pages/PrivacyPolicy";
 import Blog from "@/pages/Blog";
+import BlogPost from "@/pages/BlogPost";
 import Contact from "@/pages/Contact";
 
 import "@/components/ui/theme.css";
@@ -18,6 +19,7 @@ function Router() {
       <Route path="/terms-of-service" component={TermsOfService} />
       <Route path="/privacy-policy" component={PrivacyPolicy} />
       <Route path="/blog" component={Blog} />
+      <Route path="/blog/:id" component={BlogPost} />
       <Route path="/contact" component={Contact} />
       {/* Fallback to 404 */}
       <Route component={NotFound} />

@@ -1,9 +1,10 @@
 import React from 'react';
 import { Link } from 'wouter';
-import { ChevronLeft, Calendar, ArrowRight } from 'lucide-react';
+import { Calendar, ArrowRight, Shield } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '../components/ui/card';
 import GridBackground from '../components/GridBackground';
+import { Helmet } from 'react-helmet';
 
 const blogPosts = [
   {
@@ -65,48 +66,87 @@ const blogPosts = [
 const Blog: React.FC = () => {
   return (
     <div className="min-h-screen bg-primary-dark text-gray-100 font-sans antialiased">
+      <Helmet>
+        <title>Blog | SecureScan AI - Web Application Security</title>
+        <meta name="description" content="Latest insights and articles on web application security, AI-enhanced security scanning, and vulnerability detection from SecureScan AI." />
+        <meta name="keywords" content="web security, application security, security blog, OWASP, vulnerability scanning, security best practices" />
+        <meta property="og:title" content="Security Blog | SecureScan AI" />
+        <meta property="og:description" content="Latest insights and articles on web application security and vulnerability detection." />
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content="https://securescanai.com/blog" />
+        <link rel="canonical" href="https://securescanai.com/blog" />
+      </Helmet>
+      
       <GridBackground opacity={0.08} />
 
-      {/* Header */}
-      <header className="bg-primary-dark/90 border-b border-accent-blue/20 sticky top-0 z-50 backdrop-blur-md">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+      {/* Navbar */}
+      <nav className="fixed w-full bg-primary-dark/90 backdrop-blur-md z-50 border-b border-accent-blue/20">
+        <div className="container mx-auto px-4 py-3 flex justify-between items-center">
           <Link href="/">
-            <Button variant="ghost" className="text-accent-blue flex items-center gap-1">
-              <ChevronLeft className="h-4 w-4" />
-              Back to Home
-            </Button>
+            <div className="flex items-center space-x-2">
+              <Shield className="h-8 w-8 text-accent-blue" />
+              <span className="text-xl font-bold tracking-tight">SecureScan<span className="text-accent-blue">AI</span></span>
+            </div>
           </Link>
+          
+          <div className="hidden md:flex items-center space-x-8">
+            <Link href="/#features" className="text-gray-300 hover:text-accent-blue transition-colors">
+              Features
+            </Link>
+            <Link href="/#how-it-works" className="text-gray-300 hover:text-accent-blue transition-colors">
+              How it Works
+            </Link>
+            <Link href="/#pricing" className="text-gray-300 hover:text-accent-blue transition-colors">
+              Pricing
+            </Link>
+            <Link href="/blog" className="text-accent-blue hover:text-accent-blue/80 transition-colors">
+              Blog
+            </Link>
+          </div>
+          
+          <div className="flex items-center space-x-4">
+            <Link href="/">
+              <Button 
+                variant="outline" 
+                className="border-accent-blue text-accent-blue hover:bg-accent-blue/10 hover:text-accent-blue transition-all hover:shadow-lg hover:shadow-accent-blue/20"
+              >
+                Back to Home
+              </Button>
+            </Link>
+          </div>
         </div>
-      </header>
+      </nav>
 
       {/* Content */}
-      <main className="container mx-auto px-4 py-12">
+      <main className="container mx-auto px-4 pt-28 pb-16">
         <div className="max-w-6xl mx-auto">
           <h1 className="text-3xl md:text-4xl font-bold mb-2">Blog</h1>
           <p className="text-lg text-gray-400 mb-12">Latest insights on web application security</p>
           
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {blogPosts.map((post) => (
-              <Card key={post.id} className="bg-primary-medium/50 backdrop-blur-sm border-accent-blue/20 hover:border-accent-blue/40 hover:shadow-lg hover:shadow-accent-blue/10 transition-all">
-                <CardHeader>
-                  <div className="text-sm text-accent-blue mb-1">{post.category}</div>
-                  <CardTitle className="text-xl font-semibold line-clamp-2">{post.title}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-gray-300 mb-4 line-clamp-3">{post.excerpt}</p>
-                  <div className="flex items-center text-sm text-gray-400 gap-2">
-                    <Calendar className="h-4 w-4" />
-                    <span>{post.date}</span>
-                    <span className="text-gray-500">•</span>
-                    <span>{post.readTime}</span>
-                  </div>
-                </CardContent>
-                <CardFooter>
-                  <Button variant="ghost" className="text-accent-blue hover:text-accent-blue/80 p-0 flex items-center gap-1">
-                    Read more <ArrowRight className="h-4 w-4 ml-1" />
-                  </Button>
-                </CardFooter>
-              </Card>
+              <Link href={`/blog/${post.id}`} key={post.id} className="block">
+                <Card className="bg-primary-medium/50 backdrop-blur-sm border-accent-blue/20 hover:border-accent-blue/40 hover:shadow-lg hover:shadow-accent-blue/10 transition-all h-full">
+                  <CardHeader>
+                    <div className="text-sm text-accent-blue mb-1">{post.category}</div>
+                    <CardTitle className="text-xl font-semibold line-clamp-2">{post.title}</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-gray-300 mb-4 line-clamp-3">{post.excerpt}</p>
+                    <div className="flex items-center text-sm text-gray-400 gap-2">
+                      <Calendar className="h-4 w-4" />
+                      <span>{post.date}</span>
+                      <span className="text-gray-500">•</span>
+                      <span>{post.readTime}</span>
+                    </div>
+                  </CardContent>
+                  <CardFooter>
+                    <div className="text-accent-blue hover:text-accent-blue/80 flex items-center gap-1">
+                      Read more <ArrowRight className="h-4 w-4 ml-1" />
+                    </div>
+                  </CardFooter>
+                </Card>
+              </Link>
             ))}
           </div>
         </div>
