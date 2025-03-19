@@ -14,8 +14,47 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 
+// Define interfaces for our data types
+interface DashboardStats {
+  totalScans: number;
+  activeScans: number;
+  completedScans: number;
+  failedScans: number;
+  totalVulnerabilities: number;
+  highSeverity: number;
+  mediumSeverity: number;
+  lowSeverity: number;
+}
+
+interface BaseScan {
+  id: number;
+  url: string;
+  date: string;
+  status: 'completed' | 'active' | 'failed';
+}
+
+interface CompletedScan extends BaseScan {
+  status: 'completed';
+  vulnerabilities: number;
+  highSeverity?: number;
+  mediumSeverity?: number;
+  lowSeverity?: number;
+}
+
+interface ActiveScan extends BaseScan {
+  status: 'active';
+  progress: number;
+}
+
+interface FailedScan extends BaseScan {
+  status: 'failed';
+  error: string;
+}
+
+type Scan = CompletedScan | ActiveScan | FailedScan;
+
 // Mock data for the dashboard overview
-const mockStats = {
+const mockStats: DashboardStats = {
   totalScans: 12,
   activeScans: 1,
   completedScans: 9,
@@ -27,7 +66,7 @@ const mockStats = {
 };
 
 // Mock recent scans data
-const recentScans = [
+const recentScans: Scan[] = [
   {
     id: 1,
     url: 'https://example.com',
@@ -238,19 +277,19 @@ const DashboardHome: React.FC = () => {
                       <div className="flex items-center space-x-3 text-sm">
                         <span>{scan.vulnerabilities} total</span>
                         <div className="flex space-x-1">
-                          {scan.highSeverity > 0 && (
+                          {scan.status === 'completed' && scan.highSeverity && scan.highSeverity > 0 && (
                             <div className="flex items-center">
                               <div className="h-2.5 w-2.5 rounded-full bg-red-500 mr-1"></div>
                               <span>{scan.highSeverity}</span>
                             </div>
                           )}
-                          {scan.mediumSeverity > 0 && (
+                          {scan.status === 'completed' && scan.mediumSeverity && scan.mediumSeverity > 0 && (
                             <div className="flex items-center">
                               <div className="h-2.5 w-2.5 rounded-full bg-yellow-500 mr-1"></div>
                               <span>{scan.mediumSeverity}</span>
                             </div>
                           )}
-                          {scan.lowSeverity > 0 && (
+                          {scan.status === 'completed' && scan.lowSeverity && scan.lowSeverity > 0 && (
                             <div className="flex items-center">
                               <div className="h-2.5 w-2.5 rounded-full bg-blue-500 mr-1"></div>
                               <span>{scan.lowSeverity}</span>

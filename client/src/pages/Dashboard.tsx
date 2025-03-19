@@ -14,10 +14,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Helmet } from 'react-helmet';
-import DashboardHome from '@/components/dashboard/DashboardHome';
-import ScanManager from '@/components/dashboard/ScanManager';
-import Reports from '@/components/dashboard/Reports';
-import UserSettings from '@/components/dashboard/UserSettings';
+import { DashboardHome, ScanManager, Reports, UserSettings } from '../components/dashboard';
 
 const Dashboard: React.FC = () => {
   const [location] = useLocation();
