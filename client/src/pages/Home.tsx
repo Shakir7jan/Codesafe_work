@@ -746,67 +746,26 @@ const Home: React.FC = () => {
       {/* Footer */}
       <footer className="bg-primary-dark pt-16 pb-8 border-t border-accent-blue/20">
         <div className="container mx-auto px-4">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-12">
-            {[
-              {
-                title: "Product",
-                links: [
-                  { name: "Features", href: "#features" },
-                  { name: "Pricing", href: "#pricing" },
-                  { name: "Demo", href: "#" },
-                  { name: "Documentation", href: "#" }
-                ]
-              },
-              {
-                title: "Company",
-                links: [
-                  { name: "About Us", href: "#about" },
-                  { name: "Careers", href: "#" },
-                  { name: "Blog", href: "#" },
-                  { name: "Contact", href: "#contact" }
-                ]
-              },
-              {
-                title: "Resources",
-                links: [
-                  { name: "Security Guide", href: "#" },
-                  { name: "API Documentation", href: "#" },
-                  { name: "Community", href: "#" },
-                  { name: "Support", href: "#" }
-                ]
-              },
-              {
-                title: "Legal",
-                links: [
-                  { name: "Privacy Policy", href: "#" },
-                  { name: "Terms of Service", href: "#" },
-                  { name: "Compliance", href: "#" },
-                  { name: "Security Policy", href: "#" }
-                ]
-              }
-            ].map((column, colIndex) => (
-              <div key={colIndex}>
-                <h3 className="text-lg font-semibold mb-4">{column.title}</h3>
-                <ul className="space-y-2">
-                  {column.links.map((link, linkIndex) => (
-                    <li key={linkIndex}>
-                      <a 
-                        href={link.href} 
-                        onClick={(e) => {
-                          e.preventDefault();
-                          if (link.href.startsWith('#')) {
-                            handleScrollTo(link.href.substring(1));
-                          }
-                        }}
-                        className="text-gray-400 hover:text-accent-blue transition-colors"
-                      >
-                        {link.name}
-                      </a>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
+          <div className="flex flex-wrap justify-center gap-8 mb-12">
+            <Link to="/terms-of-service" className="text-gray-400 hover:text-accent-blue transition-colors">
+              Terms of Service
+            </Link>
+            <Link to="/privacy-policy" className="text-gray-400 hover:text-accent-blue transition-colors">
+              Privacy Policy
+            </Link>
+            <Link to="/blog" className="text-gray-400 hover:text-accent-blue transition-colors">
+              Blog
+            </Link>
+            <a 
+              href="#contact" 
+              onClick={(e) => {
+                e.preventDefault();
+                handleScrollTo('contact');
+              }}
+              className="text-gray-400 hover:text-accent-blue transition-colors"
+            >
+              Contact
+            </a>
           </div>
           
           <div className="flex flex-col md:flex-row justify-between items-center pt-8 border-t border-accent-blue/10">
