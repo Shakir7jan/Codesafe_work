@@ -10,15 +10,27 @@ import {
   User, 
   Menu, 
   X, 
-  ChevronRight
+  ChevronRight,
+  LogOut
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Helmet } from 'react-helmet';
+import { useAuth } from '@/lib/auth-context';
+import { toast } from '@/hooks/use-toast';
+import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { DashboardHome, ScanManager, Reports, UserSettings } from '../components/dashboard';
 
 const Dashboard: React.FC = () => {
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { user, signOut } = useAuth();
 
   // Get the active section from the URL
   const getActiveSection = () => {
@@ -45,6 +57,33 @@ const Dashboard: React.FC = () => {
       default:
         return <DashboardHome />;
     }
+  };
+
+  const handleSignOut = async () => {
+    try {
+      const { error } = await signOut();
+      if (error) {
+        toast({
+          title: "Error signing out",
+          description: error.message,
+          variant: "destructive"
+        });
+      } else {
+        setLocation('/login');
+      }
+    } catch (err) {
+      console.error('Error signing out:', err);
+    }
+  };
+
+  // Get user display information
+  const getUserInitials = () => {
+    if (!user || !user.email) return 'U';
+    return user.email.charAt(0).toUpperCase();
+  };
+
+  const getUserDisplayName = () => {
+    return user?.email?.split('@')[0] || 'User';
   };
 
   return (
@@ -79,12 +118,35 @@ const Dashboard: React.FC = () => {
               <Button variant="ghost" size="sm" className="text-gray-300 hover:text-accent-blue">
                 <Bell className="h-5 w-5" />
               </Button>
-              <div className="flex items-center space-x-2">
-                <div className="bg-accent-blue/20 p-1 rounded-full">
-                  <User className="h-6 w-6 text-accent-blue" />
-                </div>
-                <span className="text-sm">Demo User</span>
-              </div>
+              
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <div className="flex items-center space-x-2 cursor-pointer">
+                    <div className="bg-accent-blue/20 p-1 rounded-full">
+                      <User className="h-6 w-6 text-accent-blue" />
+                    </div>
+                    <span className="text-sm">{getUserDisplayName()}</span>
+                  </div>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="bg-primary-medium border border-accent-blue/20">
+                  <DropdownMenuLabel className="text-gray-400">My Account</DropdownMenuLabel>
+                  <DropdownMenuSeparator className="bg-accent-blue/20" />
+                  <DropdownMenuItem 
+                    className="text-gray-300 hover:text-white cursor-pointer focus:bg-accent-blue/20 focus:text-white"
+                    onClick={() => setLocation('/dashboard/settings')}
+                  >
+                    <Settings className="mr-2 h-4 w-4" />
+                    <span>Settings</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem 
+                    className="text-gray-300 hover:text-white cursor-pointer focus:bg-accent-blue/20 focus:text-white"
+                    onClick={handleSignOut}
+                  >
+                    <LogOut className="mr-2 h-4 w-4" />
+                    <span>Sign out</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
         </div>
@@ -142,6 +204,15 @@ const Dashboard: React.FC = () => {
                     <span>Settings</span>
                   </div>
                 </Link>
+              </li>
+              <li className="pt-4 mt-4 border-t border-accent-blue/20">
+                <div 
+                  className="flex items-center px-4 py-3 rounded-lg transition-colors cursor-pointer text-gray-300 hover:text-gray-100 hover:bg-primary-medium/50"
+                  onClick={handleSignOut}
+                >
+                  <LogOut className="mr-3 h-5 w-5" />
+                  <span>Sign Out</span>
+                </div>
               </li>
             </ul>
           </nav>
@@ -224,6 +295,19 @@ const Dashboard: React.FC = () => {
                         <ChevronRight className="ml-auto h-5 w-5" />
                       </div>
                     </Link>
+                  </li>
+                  <li className="pt-4 mt-4 border-t border-accent-blue/20">
+                    <div 
+                      className="flex items-center px-4 py-3 rounded-lg transition-colors cursor-pointer text-gray-300 hover:text-gray-100 hover:bg-primary-medium/50"
+                      onClick={() => {
+                        handleSignOut();
+                        setMobileMenuOpen(false);
+                      }}
+                    >
+                      <LogOut className="mr-3 h-5 w-5" />
+                      <span>Sign Out</span>
+                      <ChevronRight className="ml-auto h-5 w-5" />
+                    </div>
                   </li>
                 </ul>
               </nav>

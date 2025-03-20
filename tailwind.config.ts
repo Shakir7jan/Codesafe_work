@@ -13,6 +13,12 @@ export default {
       colors: {
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
+        'primary-dark': "var(--primary-dark)",
+        'primary-medium': "var(--primary-medium)",
+        'accent-blue': "var(--accent-blue)",
+        'accent-blue-dark': "var(--accent-blue-dark)",
+        'accent-blue-light': "var(--accent-blue-light)",
+        'accent-blue-glow': "var(--accent-blue-glow)",
         card: {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
@@ -61,6 +67,11 @@ export default {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
         },
+      },
+      gradientColorStops: {
+        'accent-blue': "var(--accent-blue)",
+        'accent-blue-dark': "var(--accent-blue-dark)",
+        'accent-blue-light': "var(--accent-blue-light)",
       },
       keyframes: {
         "accordion-down": {

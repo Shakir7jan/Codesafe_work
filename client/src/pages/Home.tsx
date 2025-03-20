@@ -74,13 +74,22 @@ const Home: React.FC = () => {
           </div>
           
           <div className="flex items-center space-x-4">
-            <Button 
-              onClick={scrollToContact} 
-              variant="outline" 
-              className="hidden md:flex border-accent-blue text-accent-blue hover:bg-accent-blue/10 hover:text-accent-blue transition-all hover:shadow-lg hover:shadow-accent-blue/20"
-            >
-              Get Started
-            </Button>
+            <Link href="/login">
+              <Button 
+                variant="ghost" 
+                className="hidden md:flex text-gray-300 hover:text-accent-blue transition-colors"
+              >
+                Sign In
+              </Button>
+            </Link>
+            <Link href="/signup">
+              <Button 
+                variant="outline" 
+                className="hidden md:flex border-accent-blue text-accent-blue hover:bg-accent-blue/10 hover:text-accent-blue transition-all hover:shadow-lg hover:shadow-accent-blue/20"
+              >
+                Get Started
+              </Button>
+            </Link>
             <Button
               className="md:hidden" 
               variant="ghost" 
@@ -105,12 +114,23 @@ const Home: React.FC = () => {
             <button onClick={() => handleScrollTo('how-it-works')} className="block w-full text-left text-gray-300 hover:text-accent-blue transition-colors">How it Works</button>
             <button onClick={() => handleScrollTo('pricing')} className="block w-full text-left text-gray-300 hover:text-accent-blue transition-colors">Pricing</button>
             <button onClick={() => handleScrollTo('about')} className="block w-full text-left text-gray-300 hover:text-accent-blue transition-colors">About</button>
-            <Button 
-              onClick={scrollToContact}
-              className="w-full bg-accent-blue text-white hover:bg-accent-blue/90"
-            >
-              Get Started
-            </Button>
+            <Link href="/login" className="block w-full">
+              <Button 
+                variant="ghost" 
+                className="w-full justify-start text-gray-300 hover:text-accent-blue transition-colors"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Sign In
+              </Button>
+            </Link>
+            <Link href="/signup" className="block w-full">
+              <Button 
+                className="w-full bg-accent-blue text-white hover:bg-accent-blue/90"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Get Started
+              </Button>
+            </Link>
           </div>
         </motion.div>
       </nav>
@@ -153,13 +173,14 @@ const Home: React.FC = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.4 }}
             >
-              <Button 
-                onClick={scrollToContact}
-                className="bg-gradient-to-r from-accent-blue to-accent-blue-dark text-white font-semibold shadow-lg shadow-accent-blue/20 hover:shadow-xl hover:shadow-accent-blue/30 transition-all blue-glow-border-lg"
-                size="lg"
-              >
-                Start Free Scan
-              </Button>
+              <Link href="/signup">
+                <Button 
+                  className="bg-gradient-to-r from-accent-blue to-accent-blue-dark text-white font-semibold shadow-lg shadow-accent-blue/20 hover:shadow-xl hover:shadow-accent-blue/30 transition-all blue-glow-border-lg"
+                  size="lg"
+                >
+                  Start Free Scan
+                </Button>
+              </Link>
               <Button 
                 onClick={() => handleScrollTo('how-it-works')}
                 variant="outline" 

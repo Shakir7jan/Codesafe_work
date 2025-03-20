@@ -13,12 +13,15 @@
   }
   
   * {
-    @apply border-border;
+    border-color: var(--border);
   }
 
   body {
-    @apply font-sans antialiased bg-primary-dark text-gray-100;
+    font-family: sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
     background-color: var(--primary-dark);
+    color: #f3f4f6;
   }
 
   /* Custom scrollbar with blue accents */
@@ -136,21 +139,34 @@
   
   /* Tech panel with angled corner effect */
   .tech-panel {
-    @apply relative p-5 bg-primary-medium overflow-hidden blue-glow-border;
+    position: relative;
+    padding: 1.25rem;
+    background-color: var(--primary-medium);
+    overflow: hidden;
+    box-shadow: 0 0 10px 1px rgba(59, 130, 246, 0.3);
+    border: 1px solid rgba(59, 130, 246, 0.5);
     background-color: rgba(20, 28, 46, 0.7);
     backdrop-filter: blur(8px);
   }
 
   .tech-panel::before {
     content: '';
-    @apply absolute top-0 right-0 w-16 h-16;
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 4rem;
+    height: 4rem;
     background-color: rgba(59, 130, 246, 0.2);
     clip-path: polygon(0 0, 100% 0, 100% 100%);
   }
   
   .tech-panel::after {
     content: '';
-    @apply absolute top-0 right-0 w-5 h-5;
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 1.25rem;
+    height: 1.25rem;
     background-color: var(--accent-blue);
     clip-path: polygon(0 0, 100% 0, 100% 100%);
   }
@@ -165,18 +181,24 @@
   
   /* Button with glowing hover effect */
   .glow-button {
-    @apply relative overflow-hidden transition-all duration-300;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s ease;
   }
   
   .glow-button::after {
     content: '';
-    @apply absolute inset-0 rounded-md opacity-0 transition-opacity duration-300;
+    position: absolute;
+    inset: 0;
+    border-radius: 0.375rem;
+    opacity: 0;
+    transition: opacity 0.3s ease;
     background: radial-gradient(circle, var(--accent-blue-light) 0%, transparent 70%);
     z-index: -1;
   }
   
   .glow-button:hover::after {
-    @apply opacity-20;
+    opacity: 0.2;
   }
   
   /* Cybersecurity-themed circuit pattern */
@@ -212,5 +234,18 @@
     100% {
       box-shadow: 0 0 0 0 rgba(59, 130, 246, 0);
     }
+  }
+
+  @keyframes loading {
+    0% {
+      transform: translateX(-100%);
+    }
+    100% {
+      transform: translateX(300%);
+    }
+  }
+
+  .animate-loading {
+    animation: loading 2s ease-in-out infinite;
   }
 }
