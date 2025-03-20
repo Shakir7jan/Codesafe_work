@@ -564,10 +564,11 @@ const BlogPost: React.FC = () => {
       </nav>
 
       {/* Content */}
-      <main className="container mx-auto px-4 pt-28 pb-16">
+      <main className="container mx-auto px-4 pt-28 pb-16 relative">
+        <div className="absolute top-0 left-0 right-0 h-96 bg-radial-gradient-accent-blue opacity-50 -z-10" />
         <div className="max-w-4xl mx-auto">
-          <div className="text-accent-blue text-sm mb-2">{post.category}</div>
-          <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4">{post.title}</h1>
+          <div className="text-accent-blue text-sm mb-2 font-semibold">{post.category}</div>
+          <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-300">{post.title}</h1>
           
           <div className="flex items-center gap-4 mb-8 text-gray-300">
             <div className="flex items-center gap-2">
@@ -583,48 +584,50 @@ const BlogPost: React.FC = () => {
             <span>{post.readTime}</span>
           </div>
           
-          <div className="bg-primary-medium/30 backdrop-blur-sm border border-accent-blue/20 rounded-lg p-8 mb-12">
+          <div className="bg-primary-medium/30 backdrop-blur-sm border border-accent-blue/20 rounded-lg p-8 mb-12 shadow-lg shadow-accent-blue/5 hover:shadow-accent-blue/10 transition-all">
             <p className="text-xl text-gray-300 italic">
               {post.excerpt}
             </p>
           </div>
           
           <div 
-            className="prose prose-lg prose-invert max-w-none prose-headings:text-accent-blue prose-headings:font-semibold prose-p:text-gray-300 prose-a:text-accent-blue"
+            className="prose prose-lg prose-invert max-w-none prose-headings:text-accent-blue prose-headings:font-semibold prose-p:text-gray-300 prose-a:text-accent-blue prose-code:bg-primary-medium/50 prose-code:text-accent-blue prose-code:p-1 prose-code:rounded prose-li:text-gray-300 prose-strong:text-white"
             dangerouslySetInnerHTML={{ __html: post.content }}
           />
           
           <div className="border-t border-accent-blue/20 mt-12 pt-8">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div>
-                <div className="text-sm text-gray-400">Written by</div>
+              <div className="bg-primary-medium/40 backdrop-blur-sm p-4 rounded-lg border border-accent-blue/10 hover:border-accent-blue/20 transition-all">
+                <div className="text-sm text-accent-blue">Written by</div>
                 <div className="text-xl font-medium">{post.author}</div>
+                <div className="text-sm text-gray-400 mt-1">Security Researcher</div>
               </div>
               
               <div className="flex gap-2">
-                <Button variant="outline" className="border-accent-blue/50 hover:border-accent-blue text-accent-blue">
+                <Button variant="outline" className="border-accent-blue/50 hover:border-accent-blue text-accent-blue hover:bg-accent-blue/10 hover:shadow-lg hover:shadow-accent-blue/20 transition-all">
                   Share on Twitter
                 </Button>
-                <Button variant="outline" className="border-accent-blue/50 hover:border-accent-blue text-accent-blue">
+                <Button variant="outline" className="border-accent-blue/50 hover:border-accent-blue text-accent-blue hover:bg-accent-blue/10 hover:shadow-lg hover:shadow-accent-blue/20 transition-all">
                   Share on LinkedIn
                 </Button>
               </div>
             </div>
           </div>
           
-          <div className="mt-12">
-            <h2 className="text-2xl font-bold mb-6">Related Articles</h2>
+          <div className="mt-16 relative">
+            <div className="absolute top-0 left-0 right-0 h-full bg-radial-gradient-accent-blue opacity-30 -z-10" />
+            <h2 className="text-2xl font-bold mb-6 border-l-4 border-accent-blue pl-4">Related Articles</h2>
             <div className="grid md:grid-cols-2 gap-6">
               {blogPosts
                 .filter(p => p.id !== post.id && p.category === post.category)
                 .slice(0, 2)
                 .map(relatedPost => (
                   <Link href={`/blog/${relatedPost.id}`} key={relatedPost.id} className="block">
-                    <div className="bg-primary-medium/50 backdrop-blur-sm border border-accent-blue/20 rounded-lg p-6 hover:border-accent-blue/40 hover:shadow-lg hover:shadow-accent-blue/10 transition-all">
-                      <div className="text-sm text-accent-blue mb-1">{relatedPost.category}</div>
+                    <div className="bg-primary-medium/50 backdrop-blur-sm border border-accent-blue/20 rounded-lg p-6 hover:border-accent-blue/40 hover:shadow-lg hover:shadow-accent-blue/10 transition-all h-full">
+                      <div className="text-sm text-accent-blue mb-1 font-medium">{relatedPost.category}</div>
                       <h3 className="text-xl font-semibold mb-2">{relatedPost.title}</h3>
                       <p className="text-gray-300 mb-4 line-clamp-2">{relatedPost.excerpt}</p>
-                      <div className="text-accent-blue flex items-center gap-1">
+                      <div className="text-accent-blue flex items-center gap-1 mt-auto">
                         Read more <ArrowRight className="h-4 w-4 ml-1" />
                       </div>
                     </div>

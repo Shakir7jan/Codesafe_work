@@ -118,31 +118,32 @@ const Blog: React.FC = () => {
       </nav>
 
       {/* Content */}
-      <main className="container mx-auto px-4 pt-28 pb-16">
+      <main className="container mx-auto px-4 pt-28 pb-16 relative">
+        <div className="absolute top-0 left-0 right-0 h-96 bg-radial-gradient-accent-blue opacity-50 -z-10" />
         <div className="max-w-6xl mx-auto">
-          <h1 className="text-3xl md:text-4xl font-bold mb-2">Blog</h1>
+          <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-2 bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-300">Blog</h1>
           <p className="text-lg text-gray-400 mb-12">Latest insights on web application security</p>
           
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {blogPosts.map((post) => (
-              <Link href={`/blog/${post.id}`} key={post.id} className="block">
-                <Card className="bg-primary-medium/50 backdrop-blur-sm border-accent-blue/20 hover:border-accent-blue/40 hover:shadow-lg hover:shadow-accent-blue/10 transition-all h-full">
+              <Link href={`/blog/${post.id}`} key={post.id} className="block group">
+                <Card className="bg-primary-medium/50 backdrop-blur-sm border-accent-blue/20 group-hover:border-accent-blue/40 group-hover:shadow-lg group-hover:shadow-accent-blue/10 transition-all h-full">
                   <CardHeader>
-                    <div className="text-sm text-accent-blue mb-1">{post.category}</div>
-                    <CardTitle className="text-xl font-semibold line-clamp-2">{post.title}</CardTitle>
+                    <div className="text-sm text-accent-blue mb-1 font-medium">{post.category}</div>
+                    <CardTitle className="text-xl font-semibold line-clamp-2 group-hover:text-white transition-colors">{post.title}</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <p className="text-gray-300 mb-4 line-clamp-3">{post.excerpt}</p>
                     <div className="flex items-center text-sm text-gray-400 gap-2">
-                      <Calendar className="h-4 w-4" />
+                      <Calendar className="h-4 w-4 text-accent-blue" />
                       <span>{post.date}</span>
                       <span className="text-gray-500">•</span>
                       <span>{post.readTime}</span>
                     </div>
                   </CardContent>
                   <CardFooter>
-                    <div className="text-accent-blue hover:text-accent-blue/80 flex items-center gap-1">
-                      Read more <ArrowRight className="h-4 w-4 ml-1" />
+                    <div className="text-accent-blue group-hover:text-accent-blue/80 flex items-center gap-1 transition-all">
+                      Read more <ArrowRight className="h-4 w-4 ml-1 group-hover:ml-2 transition-all" />
                     </div>
                   </CardFooter>
                 </Card>
