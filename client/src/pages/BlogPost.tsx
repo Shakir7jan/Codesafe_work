@@ -568,49 +568,85 @@ const BlogPost: React.FC = () => {
 
       {/* Content */}
       <main className="container mx-auto px-4 pt-28 pb-16 relative">
-        <div className="absolute top-0 left-0 right-0 h-96 bg-radial-gradient-accent-blue opacity-50 -z-10" />
+        <div className="absolute top-0 left-0 right-0 h-96 bg-radial-gradient-accent-blue opacity-60 -z-10" />
         <div className="max-w-4xl mx-auto">
-          <div className="text-accent-blue text-sm mb-2 font-semibold">{post.category}</div>
-          <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-300">{post.title}</h1>
+          <div className="inline-block px-3 py-1 rounded-full bg-accent-blue/10 text-accent-blue-light border border-accent-blue/20 text-sm font-medium mb-3">{post.category}</div>
           
-          <div className="flex items-center gap-4 mb-8 text-gray-300">
-            <div className="flex items-center gap-2">
-              <User className="h-4 w-4 text-accent-blue" /> 
-              <span>{post.author}</span>
-            </div>
-            <span className="text-gray-500">•</span>
-            <div className="flex items-center gap-2">
-              <Calendar className="h-4 w-4 text-accent-blue" /> 
-              <span>{post.date}</span>
-            </div>
-            <span className="text-gray-500">•</span>
-            <span>{post.readTime}</span>
+          <div className="relative blue-angled-border inline-block p-4 mb-2 w-full">
+            <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-2 blue-gradient-text">{post.title}</h1>
           </div>
           
-          <div className="bg-primary-medium/30 backdrop-blur-sm border border-accent-blue/20 rounded-lg p-8 mb-12 shadow-lg shadow-accent-blue/5 hover:shadow-accent-blue/10 transition-all">
-            <p className="text-xl text-gray-300 italic">
+          <div className="flex flex-wrap items-center gap-4 mb-8 text-gray-300 px-4 py-2 bg-primary-medium/20 border-l-2 border-accent-blue/30 rounded-r-md">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-full bg-accent-blue/20 flex items-center justify-center border border-accent-blue/30">
+                <User className="h-4 w-4 text-accent-blue-light" /> 
+              </div>
+              <span>{post.author}</span>
+            </div>
+            <span className="text-accent-blue/40">•</span>
+            <div className="flex items-center gap-2">
+              <Calendar className="h-4 w-4 text-accent-blue-light" /> 
+              <span>{post.date}</span>
+            </div>
+            <span className="text-accent-blue/40">•</span>
+            <span className="flex items-center">
+              <span className="inline-block w-2 h-2 bg-accent-blue rounded-full mr-2"></span>
+              {post.readTime}
+            </span>
+          </div>
+          
+          <div className="bg-primary-medium/30 backdrop-blur-sm border-l-4 border-accent-blue/50 border-t border-r border-b border-accent-blue/20 rounded-lg p-8 mb-12 shadow-lg blue-glow-border">
+            <p className="text-xl text-gray-300 italic relative">
+              <span className="absolute -left-6 top-0 text-4xl text-accent-blue/20">"</span>
               {post.excerpt}
+              <span className="absolute -right-2 bottom-0 text-4xl text-accent-blue/20">"</span>
             </p>
           </div>
           
           <div 
-            className="prose prose-lg prose-invert max-w-none prose-headings:text-accent-blue prose-headings:font-semibold prose-p:text-gray-300 prose-a:text-accent-blue prose-code:bg-primary-medium/50 prose-code:text-accent-blue prose-code:p-1 prose-code:rounded prose-li:text-gray-300 prose-strong:text-white"
+            className="prose prose-lg prose-invert max-w-none prose-headings:blue-gradient-text prose-headings:font-semibold prose-p:text-gray-300 prose-a:text-accent-blue-light hover:prose-a:text-accent-blue prose-code:bg-primary-medium/50 prose-code:text-accent-blue prose-code:p-1 prose-code:rounded prose-li:text-gray-300 prose-strong:text-white prose-headings:border-l-2 prose-headings:border-accent-blue/30 prose-headings:pl-2 hover:prose-a:underline hover:prose-a:decoration-accent-blue/40"
             dangerouslySetInnerHTML={{ __html: post.content }}
           />
           
-          <div className="border-t border-accent-blue/20 mt-12 pt-8">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div className="bg-primary-medium/40 backdrop-blur-sm p-4 rounded-lg border border-accent-blue/10 hover:border-accent-blue/20 transition-all">
-                <div className="text-sm text-accent-blue">Written by</div>
-                <div className="text-xl font-medium">{post.author}</div>
-                <div className="text-sm text-gray-400 mt-1">Security Researcher</div>
+          <div className="border-t border-accent-blue/30 mt-12 pt-8 relative overflow-hidden">
+            <div 
+              className="absolute inset-0 -z-10"
+              style={{
+                backgroundSize: '20px 20px',
+                backgroundImage: `
+                  linear-gradient(to right, var(--accent-blue)/5 1px, transparent 1px),
+                  linear-gradient(to bottom, var(--accent-blue)/5 1px, transparent 1px)
+                `,
+                opacity: 0.2
+              }}
+            />
+            
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+              <div className="bg-primary-medium/40 backdrop-blur-sm p-5 rounded-lg blue-glow-border relative overflow-hidden">
+                {/* Decorative angled accent for author box */}
+                <div className="absolute top-0 right-0 h-16 w-16 overflow-hidden">
+                  <div className="absolute top-0 right-0 transform rotate-45 bg-gradient-to-r from-accent-blue to-accent-blue-light h-24 w-1 opacity-60" />
+                </div>
+                
+                <div className="text-sm text-accent-blue-light font-medium mb-1">Written by</div>
+                <div className="text-xl font-medium blue-gradient-text">{post.author}</div>
+                <div className="text-sm text-gray-400 mt-1 flex items-center">
+                  <span className="inline-block w-2 h-2 bg-accent-blue rounded-full mr-2"></span>
+                  Security Researcher
+                </div>
               </div>
               
-              <div className="flex gap-2">
-                <Button variant="outline" className="border-accent-blue/50 hover:border-accent-blue text-accent-blue hover:bg-accent-blue/10 hover:shadow-lg hover:shadow-accent-blue/20 transition-all">
+              <div className="flex flex-wrap md:flex-nowrap gap-3">
+                <Button 
+                  variant="outline" 
+                  className="border-accent-blue/50 hover:border-accent-blue text-accent-blue hover:bg-accent-blue/10 hover:text-accent-blue-light transition-all blue-glow-border"
+                >
                   Share on Twitter
                 </Button>
-                <Button variant="outline" className="border-accent-blue/50 hover:border-accent-blue text-accent-blue hover:bg-accent-blue/10 hover:shadow-lg hover:shadow-accent-blue/20 transition-all">
+                <Button 
+                  variant="outline" 
+                  className="border-accent-blue/50 hover:border-accent-blue text-accent-blue hover:bg-accent-blue/10 hover:text-accent-blue-light transition-all blue-glow-border"
+                >
                   Share on LinkedIn
                 </Button>
               </div>
@@ -618,20 +654,36 @@ const BlogPost: React.FC = () => {
           </div>
           
           <div className="mt-16 relative">
-            <div className="absolute top-0 left-0 right-0 h-full bg-radial-gradient-accent-blue opacity-30 -z-10" />
-            <h2 className="text-2xl font-bold mb-6 border-l-4 border-accent-blue pl-4">Related Articles</h2>
+            <div className="absolute top-0 left-0 right-0 h-full bg-radial-gradient-accent-blue opacity-40 -z-10" />
+            
+            <div className="relative blue-angled-border inline-block p-3 mb-6">
+              <h2 className="text-2xl font-bold blue-gradient-text">Related Articles</h2>
+            </div>
+            
             <div className="grid md:grid-cols-2 gap-6">
               {blogPosts
                 .filter(p => p.id !== post.id && p.category === post.category)
                 .slice(0, 2)
-                .map(relatedPost => (
-                  <Link href={`/blog/${relatedPost.id}`} key={relatedPost.id} className="block">
-                    <div className="bg-primary-medium/50 backdrop-blur-sm border border-accent-blue/20 rounded-lg p-6 hover:border-accent-blue/40 hover:shadow-lg hover:shadow-accent-blue/10 transition-all h-full">
-                      <div className="text-sm text-accent-blue mb-1 font-medium">{relatedPost.category}</div>
-                      <h3 className="text-xl font-semibold mb-2">{relatedPost.title}</h3>
+                .map((relatedPost, index) => (
+                  <Link href={`/blog/${relatedPost.id}`} key={relatedPost.id} className="block group">
+                    <div className="bg-primary-medium/50 backdrop-blur-sm border border-accent-blue/20 rounded-lg p-6 hover:border-accent-blue/40 group-hover:blue-glow-border transition-all duration-300 h-full relative overflow-hidden">
+                      {/* Decorative corner accent */}
+                      <div className="absolute top-0 right-0 w-16 h-16 overflow-hidden">
+                        <div className="absolute top-0 right-0 w-24 h-1 bg-gradient-to-l from-accent-blue to-transparent transform rotate-45 translate-y-6"></div>
+                      </div>
+                      
+                      <div className="inline-block px-2 py-0.5 rounded-full bg-accent-blue/10 text-accent-blue-light border border-accent-blue/20 text-xs font-medium mb-2">
+                        {relatedPost.category}
+                      </div>
+                      
+                      <h3 className="text-xl font-semibold mb-2 group-hover:blue-gradient-text transition-all duration-300">
+                        {relatedPost.title}
+                      </h3>
+                      
                       <p className="text-gray-300 mb-4 line-clamp-2">{relatedPost.excerpt}</p>
-                      <div className="text-accent-blue flex items-center gap-1 mt-auto">
-                        Read more <ArrowRight className="h-4 w-4 ml-1" />
+                      
+                      <div className="text-accent-blue-light group-hover:text-accent-blue flex items-center gap-1 mt-auto font-medium">
+                        Read article <ArrowRight className="h-4 w-4 ml-1 group-hover:ml-2 transition-all" />
                       </div>
                     </div>
                   </Link>
@@ -642,19 +694,46 @@ const BlogPost: React.FC = () => {
       </main>
       
       {/* Footer */}
-      <footer className="bg-primary-medium/30 border-t border-accent-blue/20 py-8">
+      <footer className="bg-primary-medium/60 border-t border-accent-blue/30 py-8 relative">
+        <div className="absolute inset-0 -z-10">
+          <div 
+            className="absolute inset-0"
+            style={{
+              backgroundSize: '30px 30px',
+              backgroundImage: `
+                linear-gradient(to right, var(--accent-blue)/5 1px, transparent 1px),
+                linear-gradient(to bottom, var(--accent-blue)/5 1px, transparent 1px)
+              `,
+              opacity: 0.3
+            }}
+          />
+        </div>
+        
         <div className="container mx-auto px-4">
-          <div className="flex flex-col md:flex-row justify-center items-center gap-4 text-sm text-gray-400">
-            <Link href="/terms-of-service" className="hover:text-accent-blue transition-colors">Terms of Service</Link>
-            <div className="hidden md:block">•</div>
-            <Link href="/privacy-policy" className="hover:text-accent-blue transition-colors">Privacy Policy</Link>
-            <div className="hidden md:block">•</div>
-            <Link href="/blog" className="hover:text-accent-blue transition-colors">Blog</Link>
-            <div className="hidden md:block">•</div>
-            <Link href="/contact" className="hover:text-accent-blue transition-colors">Contact</Link>
+          <div className="flex flex-col md:flex-row justify-center items-center gap-6 text-sm text-gray-400">
+            <Link href="/terms-of-service" className="hover:text-accent-blue-light transition-colors hover:underline decoration-accent-blue/30 underline-offset-4">
+              Terms of Service
+            </Link>
+            <div className="hidden md:block text-accent-blue/40">•</div>
+            <Link href="/privacy-policy" className="hover:text-accent-blue-light transition-colors hover:underline decoration-accent-blue/30 underline-offset-4">
+              Privacy Policy
+            </Link>
+            <div className="hidden md:block text-accent-blue/40">•</div>
+            <Link href="/blog" className="text-accent-blue hover:text-accent-blue-light transition-colors">
+              Blog
+            </Link>
+            <div className="hidden md:block text-accent-blue/40">•</div>
+            <Link href="/contact" className="hover:text-accent-blue-light transition-colors hover:underline decoration-accent-blue/30 underline-offset-4">
+              Contact
+            </Link>
           </div>
-          <div className="text-center mt-4 text-sm text-gray-500">
-            &copy; {new Date().getFullYear()} SecureScan AI. All rights reserved.
+          
+          <div className="flex justify-center mt-6 mb-4">
+            <div className="h-px w-24 bg-gradient-to-r from-transparent via-accent-blue/30 to-transparent"></div>
+          </div>
+          
+          <div className="text-center text-sm text-gray-500">
+            &copy; {new Date().getFullYear()} SecureScan<span className="text-accent-blue">AI</span>. All rights reserved.
           </div>
         </div>
       </footer>
