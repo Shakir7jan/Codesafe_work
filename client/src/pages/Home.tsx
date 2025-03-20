@@ -116,29 +116,34 @@ const Home: React.FC = () => {
       {/* Hero Section */}
       <section className="pt-32 pb-16 md:py-32 relative overflow-hidden">
         <div className="absolute inset-0 bg-radial-gradient-accent-blue" />
-        <GridBackground opacity={0.12} />
+        <GridBackground opacity={0.3} gridSize={30} />
         
         <div className="container mx-auto px-4 flex flex-col md:flex-row items-center">
           <div className="md:w-1/2 space-y-6 z-10">
-            <motion.h1 
-              className="text-4xl md:text-5xl lg:text-6xl font-extrabold leading-tight"
+            <motion.div
+              className="relative"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5 }}
             >
-              <span>Secure Your Web Apps</span>
-              <span className="block text-accent-blue">With AI-Enhanced Security Scans</span>
-            </motion.h1>
+              <div className="absolute -left-4 top-0 bottom-0 w-1 bg-gradient-to-b from-accent-blue to-accent-blue-light opacity-70"></div>
+              <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold leading-tight">
+                <span className="bg-clip-text text-transparent bg-gradient-to-r from-gray-100 to-gray-300">Secure Your Web Apps</span>
+                <span className="block blue-gradient-text">With AI-Enhanced Security Scans</span>
+              </h1>
+            </motion.div>
             
-            <motion.p 
-              className="text-xl text-gray-300 md:pr-10"
+            <motion.div
+              className="relative blue-highlight-bar"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.2 }}
             >
-              Identify vulnerabilities in AI-generated and traditional web apps with our 
-              comprehensive security scanning solution built on ZAP technology.
-            </motion.p>
+              <p className="text-xl text-gray-300 md:pr-10">
+                Identify vulnerabilities in AI-generated and traditional web apps with our 
+                comprehensive security scanning solution built on <span className="text-accent-blue-light font-medium">ZAP technology</span>.
+              </p>
+            </motion.div>
             
             <motion.div 
               className="pt-4 flex flex-col sm:flex-row gap-4"
@@ -148,7 +153,7 @@ const Home: React.FC = () => {
             >
               <Button 
                 onClick={scrollToContact}
-                className="bg-accent-blue hover:bg-accent-blue/90 text-white font-semibold hover:shadow-lg hover:shadow-accent-blue/20 transition-all"
+                className="bg-accent-blue hover:bg-accent-blue/90 text-white font-semibold hover:shadow-lg hover:shadow-accent-blue/20 transition-all blue-glow-border-lg"
                 size="lg"
               >
                 Start Free Scan
@@ -156,7 +161,7 @@ const Home: React.FC = () => {
               <Button 
                 onClick={() => handleScrollTo('how-it-works')}
                 variant="outline" 
-                className="border-accent-blue/60 text-accent-blue hover:bg-accent-blue/10 hover:text-accent-blue transition-all"
+                className="border-accent-blue/60 text-accent-blue hover:bg-accent-blue/10 hover:text-accent-blue transition-all blue-glow-border"
                 size="lg"
               >
                 See How It Works
@@ -312,21 +317,23 @@ const Home: React.FC = () => {
       {/* How It Works Section */}
       <section id="how-it-works" className="py-20 bg-primary-medium/30 relative">
         <div className="absolute inset-0 bg-radial-gradient-accent-blue" />
-        <GridBackground opacity={0.12} />
+        <GridBackground opacity={0.3} gridSize={25} showDots={true} />
         
         <div className="container mx-auto px-4 relative z-10">
           <div className="text-center max-w-3xl mx-auto mb-16">
-            <motion.h2 
-              className="text-3xl md:text-4xl font-bold mb-4"
+            <motion.div
+              className="inline-block relative blue-angled-border py-3 px-6"
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.5 }}
             >
-              How SecureScan AI Works
-            </motion.h2>
+              <h2 className="text-3xl md:text-4xl font-bold mb-4 blue-gradient-text">
+                How SecureScan AI Works
+              </h2>
+            </motion.div>
             <motion.p 
-              className="text-lg text-gray-300"
+              className="text-lg text-gray-300 mt-4 px-4 py-2 border-l-2 border-r-2 border-accent-blue/30 blue-glow-border inline-block"
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
@@ -356,39 +363,65 @@ const Home: React.FC = () => {
             ].map((step, index) => (
               <motion.div 
                 key={index}
-                className="bg-primary-medium/50 backdrop-blur-sm p-6 rounded-lg border border-accent-blue/20 relative"
+                className="bg-primary-medium/50 backdrop-blur-sm p-6 rounded-lg border border-accent-blue/20 relative blue-glow-border overflow-hidden"
                 initial={{ opacity: 0, y: 30 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.5, delay: 0.2 * index }}
               >
-                <div className="absolute -top-5 -left-5 w-10 h-10 rounded-full bg-accent-blue flex items-center justify-center text-xl font-bold">
+                {/* Decorative diagonal line */}
+                <div className="absolute top-0 right-0 h-20 w-20 overflow-hidden">
+                  <div className="absolute top-0 right-0 transform rotate-45 bg-gradient-to-r from-accent-blue to-accent-blue-light h-40 w-1 opacity-60" />
+                </div>
+                
+                {/* Step number */}
+                <div className="absolute -top-5 -left-5 w-10 h-10 rounded-full bg-accent-blue flex items-center justify-center text-xl font-bold blue-glow-border">
                   {step.step}
                 </div>
-                <div className="w-full h-48 rounded-md mb-4 bg-primary-dark/50 flex items-center justify-center">
+                
+                {/* Content illustration */}
+                <div className="w-full h-48 rounded-md mb-4 bg-primary-dark/70 flex items-center justify-center blue-angled-border overflow-hidden">
+                  {/* Subtle grid background inside the illustration */}
+                  <div 
+                    className="absolute inset-0"
+                    style={{
+                      backgroundSize: '20px 20px',
+                      backgroundImage: `
+                        linear-gradient(to right, var(--accent-blue)/5 1px, transparent 1px),
+                        linear-gradient(to bottom, var(--accent-blue)/5 1px, transparent 1px)
+                      `,
+                      opacity: 0.3
+                    }}
+                  />
+                  
                   {index === 0 && (
-                    <div className="text-accent-blue text-lg p-4 border border-accent-blue/30 rounded-md">
+                    <div className="text-accent-blue-light text-lg p-4 border border-accent-blue/30 rounded-md blue-glow-border relative z-10">
                       https://yourwebapp.com
                     </div>
                   )}
                   {index === 1 && (
-                    <div className="w-2/3 h-2/3 relative">
-                      <div className="absolute inset-0 border-2 border-accent-green/30 rounded-md animate-pulse" />
-                      <div className="absolute top-1/4 left-1/4 w-6 h-6 bg-accent-red/50 rounded-full animate-ping" />
-                      <div className="absolute bottom-1/3 right-1/4 w-4 h-4 bg-accent-red/50 rounded-full animate-ping" style={{ animationDelay: '1s' }} />
+                    <div className="w-2/3 h-2/3 relative z-10">
+                      <div className="absolute inset-0 border-2 border-accent-blue/50 rounded-md animate-pulse" />
+                      <div className="absolute top-1/4 left-1/4 w-6 h-6 bg-accent-red/50 rounded-full animate-ping" 
+                        style={{boxShadow: '0 0 10px 2px var(--accent-blue)'}}
+                      />
+                      <div className="absolute bottom-1/3 right-1/4 w-4 h-4 bg-accent-red/50 rounded-full animate-ping" 
+                        style={{animationDelay: '1s', boxShadow: '0 0 8px 2px var(--accent-blue)'}} 
+                      />
                     </div>
                   )}
                   {index === 2 && (
-                    <div className="w-2/3 space-y-2">
-                      <div className="h-4 bg-accent-blue/20 rounded w-full" />
-                      <div className="h-4 bg-accent-blue/20 rounded w-5/6" />
+                    <div className="w-2/3 space-y-2 relative z-10">
+                      <div className="h-4 bg-accent-blue/30 rounded w-full" />
+                      <div className="h-4 bg-accent-blue/30 rounded w-5/6" />
                       <div className="h-4 bg-accent-red/40 rounded w-4/6" />
-                      <div className="h-4 bg-accent-blue/20 rounded w-full" />
-                      <div className="h-4 bg-accent-green/30 rounded w-3/6" />
+                      <div className="h-4 bg-accent-blue/30 rounded w-full" />
+                      <div className="h-4 bg-accent-blue-light/30 rounded w-3/6" />
                     </div>
                   )}
                 </div>
-                <h3 className="text-xl font-semibold mb-2">{step.title}</h3>
+                
+                <h3 className="text-xl font-semibold mb-2 blue-gradient-text">{step.title}</h3>
                 <p className="text-gray-300">{step.description}</p>
               </motion.div>
             ))}

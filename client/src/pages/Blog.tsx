@@ -77,15 +77,18 @@ const Blog: React.FC = () => {
         <link rel="canonical" href="https://securescanai.com/blog" />
       </Helmet>
       
-      <GridBackground opacity={0.08} />
+      <GridBackground opacity={0.3} gridSize={30} showDots={true} />
 
       {/* Navbar */}
       <nav className="fixed w-full bg-primary-dark/90 backdrop-blur-md z-50 border-b border-accent-blue/20">
         <div className="container mx-auto px-4 py-3 flex justify-between items-center">
           <Link href="/">
             <div className="flex items-center space-x-2">
-              <Shield className="h-8 w-8 text-accent-blue" />
-              <span className="text-xl font-bold tracking-tight">SecureScan<span className="text-accent-blue">AI</span></span>
+              <div className="relative">
+                <Shield className="h-8 w-8 text-accent-blue relative z-10" />
+                <div className="absolute inset-0 bg-accent-blue/20 rounded-full blur-md"></div>
+              </div>
+              <span className="text-xl font-bold tracking-tight">SecureScan<span className="blue-gradient-text">AI</span></span>
             </div>
           </Link>
           
@@ -99,7 +102,7 @@ const Blog: React.FC = () => {
             <Link href="/#pricing" className="text-gray-300 hover:text-accent-blue transition-colors">
               Pricing
             </Link>
-            <Link href="/blog" className="text-accent-blue hover:text-accent-blue/80 transition-colors">
+            <Link href="/blog" className="text-accent-blue-light hover:text-accent-blue transition-colors">
               Blog
             </Link>
           </div>
@@ -108,7 +111,7 @@ const Blog: React.FC = () => {
             <Link href="/">
               <Button 
                 variant="outline" 
-                className="border-accent-blue text-accent-blue hover:bg-accent-blue/10 hover:text-accent-blue transition-all hover:shadow-lg hover:shadow-accent-blue/20"
+                className="border-accent-blue/60 text-accent-blue hover:bg-accent-blue/10 hover:text-accent-blue-light transition-all blue-glow-border"
               >
                 Back to Home
               </Button>
@@ -119,10 +122,12 @@ const Blog: React.FC = () => {
 
       {/* Content */}
       <main className="container mx-auto px-4 pt-28 pb-16 relative">
-        <div className="absolute top-0 left-0 right-0 h-96 bg-radial-gradient-accent-blue opacity-50 -z-10" />
+        <div className="absolute top-0 left-0 right-0 h-96 bg-radial-gradient-accent-blue opacity-60 -z-10" />
         <div className="max-w-6xl mx-auto">
-          <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-2 bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-300">Blog</h1>
-          <p className="text-lg text-gray-400 mb-12">Latest insights on web application security</p>
+          <div className="relative blue-angled-border inline-block p-4 mb-4">
+            <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold blue-gradient-text">Blog</h1>
+          </div>
+          <p className="text-lg text-gray-300 mb-12 max-w-2xl ml-2 blue-highlight-bar">Latest insights and research on web application security and vulnerability detection</p>
           
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {blogPosts.map((post) => (
