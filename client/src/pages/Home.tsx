@@ -436,7 +436,7 @@ const Home: React.FC = () => {
                   {index === 1 && (
                     <div className="w-full h-full py-2 px-4 relative z-10 flex items-center justify-center">
                       <div className="absolute inset-0 opacity-20">
-                        <RadarAnimation />
+                        <RadarAnimation size="100%" className="opacity-30" />
                       </div>
                       
                       <CodeSnippet
@@ -525,7 +525,7 @@ class AIScanner extends BaseScanner {
           <div className="mt-16 text-center">
             <Button
               onClick={scrollToContact}
-              className="bg-accent-blue hover:bg-accent-blue/90 text-white font-semibold hover:shadow-lg hover:shadow-accent-blue/20 transition-all"
+              className="bg-gradient-to-r from-accent-blue to-accent-blue-dark text-white font-semibold shadow-lg shadow-accent-blue/20 hover:shadow-xl hover:shadow-accent-blue/30 transition-all blue-glow-border-lg"
               size="lg"
             >
               Start Your First Scan
@@ -733,7 +733,7 @@ class AIScanner extends BaseScanner {
                 <Button
                   onClick={scrollToContact}
                   className={plan.highlighted 
-                    ? "w-full bg-accent-blue hover:bg-accent-blue/90" 
+                    ? "w-full bg-gradient-to-r from-accent-blue to-accent-blue-dark text-white font-semibold shadow-lg shadow-accent-blue/20 hover:shadow-xl hover:shadow-accent-blue/30 transition-all blue-glow-border" 
                     : "w-full bg-primary-light hover:bg-primary-light/80"
                   }
                 >
@@ -866,7 +866,7 @@ class AIScanner extends BaseScanner {
                 
                 <Button 
                   type="submit" 
-                  className="w-full bg-accent-blue hover:bg-accent-blue/90 text-white font-semibold py-6 text-lg hover:shadow-lg hover:shadow-accent-blue/20 transition-all flex items-center justify-center gap-2"
+                  className="w-full bg-gradient-to-r from-accent-blue to-accent-blue-dark text-white font-semibold py-6 text-lg shadow-lg shadow-accent-blue/20 hover:shadow-xl hover:shadow-accent-blue/30 transition-all blue-glow-border flex items-center justify-center gap-2"
                 >
                   Start Free Security Scan
                   <ArrowRight className="h-5 w-5" />

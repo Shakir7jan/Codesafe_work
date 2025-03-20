@@ -157,7 +157,7 @@ const RadarAnimation: React.FC<RadarAnimationProps> = ({
       
       {/* Shield Icon */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-accent-blue-light opacity-20 z-0">
-        <Shield className="w-20 h-20" />
+        <Shield className="w-16 h-16 sm:w-20 sm:h-20" />
       </div>
       
       {/* Threat & secure dots */}
