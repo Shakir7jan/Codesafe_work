@@ -37,7 +37,7 @@ const RadarAnimation: React.FC<RadarAnimationProps> = ({
   useEffect(() => {
     if (!radarRef.current || radarInitialized) return;
     
-    // Initialize radar animation
+    // Initialize radar animation based on provided code
     const radar = radarRef.current;
     const beam = radar.querySelector(".beam") as HTMLElement;
     const dots = radar.querySelectorAll(".dot") as NodeListOf<HTMLElement>;
@@ -48,39 +48,58 @@ const RadarAnimation: React.FC<RadarAnimationProps> = ({
     const TAU = PI * 2;
 
     const update = () => {
+      // Get the beam's current rotation angle
       const beamStyle = getComputedStyle(beam);
       const beamAngleStr = beamStyle.getPropertyValue("rotate") || 
                            beamStyle.getPropertyValue("transform");
       
-      // Extract rotation angle from transform string
+      // Extract rotation angle from transform string (compatible with more browsers)
       let beamAngle = 0;
       if (beamAngleStr) {
         const match = beamAngleStr.match(/rotate\(([^)]+)deg\)/);
         if (match && match[1]) {
           beamAngle = parseFloat(match[1]) * PI / 180;
+        } else if (beamAngleStr.includes('matrix')) {
+          // Handle matrix transform
+          const values = beamAngleStr.match(/matrix\((.+)\)/)?.[1]?.split(',');
+          if (values) {
+            beamAngle = Math.atan2(parseFloat(values[1]), parseFloat(values[0]));
+          }
         }
       }
 
       dots.forEach(dot => {
+        // Get the dot's coordinates and calculate its angle from center
         const x = parseFloat(getCSSVal(dot, "--x") || "0.5") - 0.5;
         const y = parseFloat(getCSSVal(dot, "--y") || "0.5") - 0.5;
         const dotAngle = mod(Math.atan2(y, x), TAU);
+        
+        // Calculate relative angle between dot and beam
         const angleOffset = mod(dotAngle - beamAngle, TAU);
+        
+        // Calculate opacity based on how close the beam is to the dot
+        // Invert the value (1 - angleOffset/TAU) so dots are visible when beam passes over them
         const opacity = 1 - (angleOffset / TAU);
         
         // Enhanced glow effect when dot is detected by the radar beam
-        if (opacity > 0.9) {
-          const glowIntensity = Math.min(1, (opacity - 0.9) * 10);
-          const type = dot.getAttribute('data-type');
-          const color = type === 'threat' ? 'rgba(239, 68, 68, ' : 'rgba(34, 197, 94, ';
-          dot.style.boxShadow = `0 0 15px 5px ${color}${glowIntensity})`;
+        const type = dot.getAttribute('data-type');
+        const isSecure = type === 'secure';
+        const baseColor = isSecure ? 'rgba(34, 197, 94,' : 'rgba(239, 68, 68,';
+        
+        if (opacity > 0.8) {
+          // Stronger glow when the beam is directly over the dot
+          const glowIntensity = Math.min(1, (opacity - 0.8) * 5);
+          dot.style.boxShadow = `0 0 15px 5px ${baseColor} ${glowIntensity})`;
+          dot.style.transform = 'scale(1.4)';
         } else {
-          const type = dot.getAttribute('data-type');
-          const color = type === 'threat' ? 'rgba(239, 68, 68, 0.5)' : 'rgba(34, 197, 94, 0.5)';
-          dot.style.boxShadow = `0 0 8px 3px ${color}`;
+          // Normal state
+          const dimOpacity = 0.4;
+          dot.style.boxShadow = `0 0 8px 3px ${baseColor} ${dimOpacity})`;
+          dot.style.transform = 'scale(1)';
         }
         
-        dot.style.opacity = String(opacity * opacity); // Squared for more dramatic effect
+        // Apply opacity with a quadratic curve for more dramatic effect
+        dot.style.opacity = String(opacity * opacity);
       });
 
       requestAnimationFrame(update);
@@ -164,7 +183,7 @@ const RadarAnimation: React.FC<RadarAnimationProps> = ({
       {threatPoints.map((point, idx) => (
         <div 
           key={idx}
-          className="dot absolute" 
+          className="dot absolute transition-all duration-300" 
           data-type={point.type}
           style={{
             '--x': point.x,
