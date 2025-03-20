@@ -18,6 +18,8 @@ import {
 } from 'lucide-react';
 import RadarAnimation from '../components/RadarAnimation';
 import GridBackground from '../components/GridBackground';
+import CodeSnippet from '../components/CodeSnippet';
+import TerminalWindow from '../components/TerminalWindow';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Textarea } from '../components/ui/textarea';
