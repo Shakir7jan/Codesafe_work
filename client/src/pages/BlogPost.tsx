@@ -522,15 +522,18 @@ const BlogPost: React.FC = () => {
         <link rel="canonical" href={`https://securescanai.com/blog/${post.id}`} />
       </Helmet>
       
-      <GridBackground opacity={0.08} />
+      <GridBackground opacity={0.3} gridSize={30} showDots={true} />
 
       {/* Navbar */}
       <nav className="fixed w-full bg-primary-dark/90 backdrop-blur-md z-50 border-b border-accent-blue/20">
         <div className="container mx-auto px-4 py-3 flex justify-between items-center">
           <Link href="/">
             <div className="flex items-center space-x-2">
-              <Shield className="h-8 w-8 text-accent-blue" />
-              <span className="text-xl font-bold tracking-tight">SecureScan<span className="text-accent-blue">AI</span></span>
+              <div className="relative">
+                <Shield className="h-8 w-8 text-accent-blue relative z-10" />
+                <div className="absolute inset-0 bg-accent-blue/20 rounded-full blur-md"></div>
+              </div>
+              <span className="text-xl font-bold tracking-tight">SecureScan<span className="blue-gradient-text">AI</span></span>
             </div>
           </Link>
           
@@ -544,7 +547,7 @@ const BlogPost: React.FC = () => {
             <Link href="/#pricing" className="text-gray-300 hover:text-accent-blue transition-colors">
               Pricing
             </Link>
-            <Link href="/blog" className="text-accent-blue hover:text-accent-blue/80 transition-colors">
+            <Link href="/blog" className="text-accent-blue-light hover:text-accent-blue transition-colors">
               Blog
             </Link>
           </div>
@@ -553,7 +556,7 @@ const BlogPost: React.FC = () => {
             <Link href="/blog">
               <Button 
                 variant="outline" 
-                className="border-accent-blue text-accent-blue hover:bg-accent-blue/10 hover:text-accent-blue transition-all hover:shadow-lg hover:shadow-accent-blue/20"
+                className="border-accent-blue/60 text-accent-blue hover:bg-accent-blue/10 hover:text-accent-blue-light transition-all blue-glow-border"
               >
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Back to Blog

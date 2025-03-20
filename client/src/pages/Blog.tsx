@@ -130,13 +130,25 @@ const Blog: React.FC = () => {
           <p className="text-lg text-gray-300 mb-12 max-w-2xl ml-2 blue-highlight-bar">Latest insights and research on web application security and vulnerability detection</p>
           
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {blogPosts.map((post) => (
+            {blogPosts.map((post, index) => (
               <Link href={`/blog/${post.id}`} key={post.id} className="block group">
-                <Card className="bg-primary-medium/50 backdrop-blur-sm border-accent-blue/20 group-hover:border-accent-blue/40 group-hover:shadow-lg group-hover:shadow-accent-blue/10 transition-all h-full">
-                  <CardHeader>
-                    <div className="text-sm text-accent-blue mb-1 font-medium">{post.category}</div>
-                    <CardTitle className="text-xl font-semibold line-clamp-2 group-hover:text-white transition-colors">{post.title}</CardTitle>
+                <Card className="bg-primary-medium/50 backdrop-blur-sm border-accent-blue/20 group-hover:border-accent-blue/40 group-hover:blue-glow-border transition-all duration-300 h-full relative overflow-hidden">
+                  {/* Decorative corner accent */}
+                  <div className="absolute top-0 right-0 w-16 h-16 overflow-hidden">
+                    <div className="absolute top-0 right-0 w-24 h-1 bg-gradient-to-l from-accent-blue to-transparent transform rotate-45 translate-y-6"></div>
+                  </div>
+                  
+                  <CardHeader className="relative">
+                    <div className="flex items-center gap-2 mb-1">
+                      <div className="text-xs px-2 py-0.5 rounded-full bg-accent-blue/10 text-accent-blue-light border border-accent-blue/20 font-medium">
+                        {post.category}
+                      </div>
+                    </div>
+                    <CardTitle className="text-xl font-semibold line-clamp-2 group-hover:blue-gradient-text transition-all duration-300">
+                      {post.title}
+                    </CardTitle>
                   </CardHeader>
+                  
                   <CardContent>
                     <p className="text-gray-300 mb-4 line-clamp-3">{post.excerpt}</p>
                     <div className="flex items-center text-sm text-gray-400 gap-2">
@@ -146,9 +158,10 @@ const Blog: React.FC = () => {
                       <span>{post.readTime}</span>
                     </div>
                   </CardContent>
-                  <CardFooter>
-                    <div className="text-accent-blue group-hover:text-accent-blue/80 flex items-center gap-1 transition-all">
-                      Read more <ArrowRight className="h-4 w-4 ml-1 group-hover:ml-2 transition-all" />
+                  
+                  <CardFooter className="border-t border-accent-blue/10 pt-4 mt-2">
+                    <div className="text-accent-blue-light group-hover:text-accent-blue flex items-center gap-1 transition-all font-medium">
+                      Read article <ArrowRight className="h-4 w-4 ml-1 group-hover:ml-2 transition-all" />
                     </div>
                   </CardFooter>
                 </Card>
@@ -159,19 +172,46 @@ const Blog: React.FC = () => {
       </main>
       
       {/* Footer */}
-      <footer className="bg-primary-medium/30 border-t border-accent-blue/20 py-8">
+      <footer className="bg-primary-medium/60 border-t border-accent-blue/30 py-8 relative">
+        <div className="absolute inset-0 -z-10">
+          <div 
+            className="absolute inset-0"
+            style={{
+              backgroundSize: '30px 30px',
+              backgroundImage: `
+                linear-gradient(to right, var(--accent-blue)/5 1px, transparent 1px),
+                linear-gradient(to bottom, var(--accent-blue)/5 1px, transparent 1px)
+              `,
+              opacity: 0.3
+            }}
+          />
+        </div>
+        
         <div className="container mx-auto px-4">
-          <div className="flex flex-col md:flex-row justify-center items-center gap-4 text-sm text-gray-400">
-            <Link href="/terms-of-service" className="hover:text-accent-blue transition-colors">Terms of Service</Link>
-            <div className="hidden md:block">•</div>
-            <Link href="/privacy-policy" className="hover:text-accent-blue transition-colors">Privacy Policy</Link>
-            <div className="hidden md:block">•</div>
-            <Link href="/blog" className="hover:text-accent-blue transition-colors">Blog</Link>
-            <div className="hidden md:block">•</div>
-            <Link href="/contact" className="hover:text-accent-blue transition-colors">Contact</Link>
+          <div className="flex flex-col md:flex-row justify-center items-center gap-6 text-sm text-gray-400">
+            <Link href="/terms-of-service" className="hover:text-accent-blue-light transition-colors hover:underline decoration-accent-blue/30 underline-offset-4">
+              Terms of Service
+            </Link>
+            <div className="hidden md:block text-accent-blue/40">•</div>
+            <Link href="/privacy-policy" className="hover:text-accent-blue-light transition-colors hover:underline decoration-accent-blue/30 underline-offset-4">
+              Privacy Policy
+            </Link>
+            <div className="hidden md:block text-accent-blue/40">•</div>
+            <Link href="/blog" className="text-accent-blue hover:text-accent-blue-light transition-colors">
+              Blog
+            </Link>
+            <div className="hidden md:block text-accent-blue/40">•</div>
+            <Link href="/contact" className="hover:text-accent-blue-light transition-colors hover:underline decoration-accent-blue/30 underline-offset-4">
+              Contact
+            </Link>
           </div>
-          <div className="text-center mt-4 text-sm text-gray-500">
-            &copy; {new Date().getFullYear()} SecureScan AI. All rights reserved.
+          
+          <div className="flex justify-center mt-6 mb-4">
+            <div className="h-px w-24 bg-gradient-to-r from-transparent via-accent-blue/30 to-transparent"></div>
+          </div>
+          
+          <div className="text-center text-sm text-gray-500">
+            &copy; {new Date().getFullYear()} SecureScan<span className="text-accent-blue">AI</span>. All rights reserved.
           </div>
         </div>
       </footer>
