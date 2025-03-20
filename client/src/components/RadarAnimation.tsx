@@ -1,5 +1,6 @@
-import React, { useEffect, useRef } from 'react';
-import { motion, useAnimation } from 'framer-motion';
+import React, { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
+import { Shield, Bug, AlertTriangle } from 'lucide-react';
 
 interface Bug {
   id: number;
@@ -11,137 +12,149 @@ interface Bug {
 }
 
 const RadarAnimation: React.FC = () => {
-  const radarControls = useAnimation();
-  const bugsControls = useAnimation();
+  const [bugs, setBugs] = useState<Bug[]>([]);
+  const [radarAngle, setRadarAngle] = useState(0);
   
   // Generate random bugs
-  const generateBugs = (): Bug[] => {
-    const bugs: Bug[] = [];
-    const colors: ('red' | 'green')[] = ['red', 'red', 'green']; // More red bugs than green
-    
-    for (let i = 0; i < 3; i++) {
-      const top = `${20 + Math.random() * 60}%`;
-      const left = `${20 + Math.random() * 60}%`;
-      const size = `${12 + Math.random() * 6}px`;
-      
-      bugs.push({
-        id: i,
-        top,
-        left,
-        size,
-        color: colors[i],
-        animationPath: getRandomPath(),
-      });
-    }
-    
-    return bugs;
-  };
-  
-  const getRandomPath = () => {
-    // Generate a random bezier curve path for bugs
-    return `
-      M 0 0
-      C ${Math.random() * 50 + 10} ${Math.random() * 20},
-        ${Math.random() * 20} ${Math.random() * 50 + 10},
-        ${Math.random() * 70 - 35} ${Math.random() * 70 - 35}
-    `;
-  };
-  
   useEffect(() => {
-    // Start the radar scan animation
-    radarControls.start({
-      rotate: 360,
-      transition: {
-        duration: 4,
-        ease: "linear",
-        repeat: Infinity
-      }
-    });
-
-    // Sequence to animate bugs detection
-    const sequence = async () => {
-      await bugsControls.start({
-        opacity: 1,
-        scale: [0, 1.2, 1],
-        transition: { duration: 0.5, delay: 1 }
-      });
+    const generateBugs = () => {
+      const newBugs: Bug[] = [];
       
-      await bugsControls.start({
-        x: (custom) => custom * 10,
-        y: (custom) => custom * 15,
-        transition: {
-          duration: 10,
-          repeat: Infinity,
-          repeatType: "reverse"
-        }
-      });
+      for (let i = 0; i < 5; i++) {
+        // Create random position for bugs
+        const angle = Math.random() * Math.PI * 2;
+        const distance = 40 + Math.random() * 40; // % from center
+        
+        const top = `${50 - Math.cos(angle) * distance}%`;
+        const left = `${50 + Math.sin(angle) * distance}%`;
+        
+        // Create random animation paths
+        const endAngle = Math.random() * Math.PI * 2;
+        const endDistance = 5 + Math.random() * 15;
+        const endTop = 50 - Math.cos(endAngle) * endDistance;
+        const endLeft = 50 + Math.sin(endAngle) * endDistance;
+        
+        const animationPath = `M${50 + Math.sin(angle) * distance},${50 - Math.cos(angle) * distance} Q${50},${50} ${endLeft},${endTop}`;
+        
+        newBugs.push({
+          id: i,
+          top,
+          left,
+          animationPath,
+          size: `${1 + Math.random() * 1.5}rem`,
+          color: Math.random() > 0.5 ? 'red' : 'green'
+        });
+      }
+      
+      setBugs(newBugs);
     };
     
-    sequence();
-  }, [radarControls, bugsControls]);
+    generateBugs();
+    
+    // Regenerate bugs every 8 seconds
+    const interval = setInterval(generateBugs, 8000);
+    return () => clearInterval(interval);
+  }, []);
   
-  const bugs = generateBugs();
-  
+  // Rotate radar
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setRadarAngle(prev => (prev + 1) % 360);
+    }, 40);
+    
+    return () => clearInterval(interval);
+  }, []);
+
   return (
-    <div className="radar-container w-[400px] h-[400px] relative max-w-full mx-auto">
-      {/* Radar base */}
-      <motion.div 
-        className="absolute top-0 left-0 w-full h-full rounded-full border-2 border-accent-blue/30"
-        initial={{ boxShadow: "0 0 10px rgba(56, 189, 248, 0.3)" }}
-        animate={{ 
-          boxShadow: ["0 0 10px rgba(56, 189, 248, 0.3)", "0 0 20px rgba(56, 189, 248, 0.4)", "0 0 10px rgba(56, 189, 248, 0.3)"]
-        }}
-        transition={{ duration: 2, repeat: Infinity }}
-      />
-      
-      {/* Radar grid */}
-      <div className="radar-grid absolute top-0 left-0 w-full h-full rounded-full">
-        <div className="absolute top-1/2 left-0 w-full h-[1px] bg-accent-blue/30" />
-        <div className="absolute top-0 left-1/2 w-[1px] h-full bg-accent-blue/30" />
+    <div className="relative h-80 w-full max-w-md mx-auto rounded-full overflow-hidden blue-glow-border">
+      {/* Background grid */}
+      <div className="absolute inset-0 opacity-30">
+        <div 
+          className="w-full h-full" 
+          style={{
+            backgroundImage: `
+              radial-gradient(circle, transparent 0%, transparent 70%, var(--accent-blue) 100%),
+              conic-gradient(from 0deg, var(--accent-blue-light) 0%, transparent 5%, transparent 95%, var(--accent-blue-light) 100%),
+              conic-gradient(from 90deg, var(--accent-blue-light) 0%, transparent 5%, transparent 95%, var(--accent-blue-light) 100%),
+              radial-gradient(circle at center, var(--accent-blue) 0%, transparent 30%)
+            `,
+            backgroundSize: '100% 100%, 100% 100%, 100% 100%, 100% 100%'
+          }}
+        />
         
         {/* Radar circles */}
-        <div className="absolute top-1/2 left-1/2 w-1/3 h-1/3 rounded-full border border-accent-blue/20 -translate-x-1/2 -translate-y-1/2" />
-        <div className="absolute top-1/2 left-1/2 w-2/3 h-2/3 rounded-full border border-accent-blue/20 -translate-x-1/2 -translate-y-1/2" />
-        <div className="absolute top-1/2 left-1/2 w-full h-full rounded-full border border-accent-blue/20 -translate-x-1/2 -translate-y-1/2" />
+        {[1, 2, 3].map((i) => (
+          <div 
+            key={i}
+            className="absolute inset-0 rounded-full border border-accent-blue/30"
+            style={{ transform: `scale(${i * 0.25})` }}
+          />
+        ))}
+        
+        {/* Radar crosshairs */}
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="w-full h-px bg-accent-blue/20" />
+        </div>
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="h-full w-px bg-accent-blue/20" />
+        </div>
       </div>
       
-      {/* Radar scan animation */}
-      <motion.div 
-        className="absolute top-0 left-0 w-full h-full rounded-full"
-        style={{
-          clipPath: "polygon(50% 50%, 50% 0, 100% 0, 100% 100%, 0 100%, 0 0, 50% 0)",
-          background: "linear-gradient(90deg, rgba(56, 189, 248, 0) 0%, rgba(56, 189, 248, 0.4) 100%)",
-          transformOrigin: "center"
-        }}
-        animate={radarControls}
-      />
+      {/* Radar sweep */}
+      <div 
+        className="absolute inset-0 origin-center" 
+        style={{ transform: `rotate(${radarAngle}deg)` }}
+      >
+        <div className="absolute top-1/2 left-1/2 w-1/2 h-1 bg-gradient-to-r from-transparent to-accent-blue-light opacity-70" />
+        
+        {/* Pulse effect at the center */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
+          <motion.div 
+            className="w-4 h-4 rounded-full bg-accent-blue-light"
+            animate={{ 
+              scale: [1, 1.5, 1],
+              opacity: [0.7, 0.3, 0.7] 
+            }}
+            transition={{ 
+              duration: 2,
+              repeat: Infinity,
+              ease: "easeInOut"
+            }}
+          />
+        </div>
+      </div>
       
-      {/* Bugs */}
+      {/* Center Shield Icon */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-accent-blue-light">
+        <Shield className="w-12 h-12 opacity-70" />
+      </div>
+      
+      {/* Animated bugs */}
       {bugs.map((bug) => (
         <motion.div
           key={bug.id}
-          className={`absolute rounded-full ${bug.color === 'red' ? 'bg-accent-red/80' : 'bg-accent-green/80'}`}
-          style={{ 
-            top: bug.top, 
-            left: bug.left, 
-            width: bug.size, 
-            height: bug.size 
+          className="absolute"
+          initial={{ top: bug.top, left: bug.left }}
+          animate={{
+            top: '50%',
+            left: '50%',
+            opacity: [1, 0.7, 0]
           }}
-          initial={{ opacity: 0, scale: 0 }}
-          animate={bugsControls}
-          custom={bug.id + 1}
+          transition={{
+            duration: 3 + Math.random() * 4,
+            ease: "easeInOut",
+            delay: Math.random() * 2
+          }}
+          style={{ 
+            translateX: '-50%',
+            translateY: '-50%'
+          }}
         >
-          <motion.div 
-            className="absolute inset-0 rounded-full"
-            animate={{ 
-              boxShadow: [
-                `0 0 5px ${bug.color === 'red' ? 'rgba(244, 63, 94, 0.8)' : 'rgba(74, 222, 128, 0.8)'}`,
-                `0 0 10px ${bug.color === 'red' ? 'rgba(244, 63, 94, 0.8)' : 'rgba(74, 222, 128, 0.8)'}`,
-                `0 0 5px ${bug.color === 'red' ? 'rgba(244, 63, 94, 0.8)' : 'rgba(74, 222, 128, 0.8)'}`
-              ]
-            }}
-            transition={{ duration: 1.5, repeat: Infinity }}
-          />
+          {bug.color === 'red' ? (
+            <AlertTriangle className="text-red-500" style={{ width: bug.size, height: bug.size }} />
+          ) : (
+            <Bug className="text-green-400" style={{ width: bug.size, height: bug.size }} />
+          )}
         </motion.div>
       ))}
     </div>
