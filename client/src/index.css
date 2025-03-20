@@ -136,18 +136,22 @@
   
   /* Tech panel with angled corner effect */
   .tech-panel {
-    @apply relative p-5 bg-primary-medium/70 backdrop-blur-sm overflow-hidden blue-glow-border;
+    @apply relative p-5 bg-primary-medium overflow-hidden blue-glow-border;
+    background-color: rgba(20, 28, 46, 0.7);
+    backdrop-filter: blur(8px);
   }
 
   .tech-panel::before {
     content: '';
-    @apply absolute top-0 right-0 w-16 h-16 bg-accent-blue/20;
+    @apply absolute top-0 right-0 w-16 h-16;
+    background-color: rgba(59, 130, 246, 0.2);
     clip-path: polygon(0 0, 100% 0, 100% 100%);
   }
   
   .tech-panel::after {
     content: '';
-    @apply absolute top-0 right-0 w-5 h-5 bg-accent-blue;
+    @apply absolute top-0 right-0 w-5 h-5;
+    background-color: var(--accent-blue);
     clip-path: polygon(0 0, 100% 0, 100% 100%);
   }
   

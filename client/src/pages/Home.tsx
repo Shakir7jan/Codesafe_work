@@ -382,7 +382,7 @@ const Home: React.FC = () => {
                 </div>
                 
                 {/* Content illustration */}
-                <div className="w-full h-48 rounded-md mb-4 bg-primary-dark/70 flex items-center justify-center blue-angled-border overflow-hidden">
+                <div className="w-full h-56 rounded-md mb-4 bg-primary-dark/70 flex items-center justify-center overflow-hidden tech-panel">
                   {/* Subtle grid background inside the illustration */}
                   <div 
                     className="absolute inset-0"
@@ -397,28 +397,104 @@ const Home: React.FC = () => {
                   />
                   
                   {index === 0 && (
-                    <div className="text-accent-blue-light text-lg p-4 border border-accent-blue/30 rounded-md blue-glow-border relative z-10">
-                      https://yourwebapp.com
+                    <div className="w-full h-full py-2 px-4 relative z-10">
+                      <TerminalWindow
+                        title="Security Scan Setup"
+                        lines={[
+                          { text: "securescanner init", type: "command" },
+                          { text: "Initializing security scan...", type: "output" },
+                          { text: "Enter target URL:", type: "output" },
+                          { text: "https://yourwebapp.com", type: "command" },
+                          { text: "Validating target...", type: "output" },
+                          { text: "Target validated ✓", type: "success" },
+                          { text: "Starting endpoint discovery...", type: "output" }
+                        ]}
+                        autoType={true}
+                        typingSpeed={20}
+                        height="100%"
+                      />
                     </div>
                   )}
+                  
                   {index === 1 && (
-                    <div className="w-2/3 h-2/3 relative z-10">
-                      <div className="absolute inset-0 border-2 border-accent-blue/50 rounded-md animate-pulse" />
-                      <div className="absolute top-1/4 left-1/4 w-6 h-6 bg-accent-red/50 rounded-full animate-ping" 
-                        style={{boxShadow: '0 0 10px 2px var(--accent-blue)'}}
-                      />
-                      <div className="absolute bottom-1/3 right-1/4 w-4 h-4 bg-accent-red/50 rounded-full animate-ping" 
-                        style={{animationDelay: '1s', boxShadow: '0 0 8px 2px var(--accent-blue)'}} 
+                    <div className="w-full h-full py-2 px-4 relative z-10 flex items-center justify-center">
+                      <div className="absolute inset-0 opacity-20">
+                        <RadarAnimation />
+                      </div>
+                      
+                      <CodeSnippet
+                        title="AI Scanner Module"
+                        code={`// AI-powered vulnerability detection
+class AIScanner extends BaseScanner {
+  constructor(target) {
+    super(target);
+    this.vulnerabilityDb = new VulnerabilityDatabase();
+    this.aiModel = new SecurityAIModel();
+  }
+  
+  async scan() {
+    console.log("Starting AI-enhanced scan...");
+    const endpoints = await this.crawlEndpoints();
+    const vulnerabilities = [];
+    
+    for (const endpoint of endpoints) {
+      const prediction = this.aiModel.predict(endpoint);
+      if (prediction.riskScore > 0.7) {
+        vulnerabilities.push({
+          endpoint,
+          riskLevel: "high",
+          description: prediction.description
+        });
+      }
+    }
+    
+    return vulnerabilities;
+  }
+}`}
+                        language="javascript"
+                        maxHeight="100%"
                       />
                     </div>
                   )}
+                  
                   {index === 2 && (
-                    <div className="w-2/3 space-y-2 relative z-10">
-                      <div className="h-4 bg-accent-blue/30 rounded w-full" />
-                      <div className="h-4 bg-accent-blue/30 rounded w-5/6" />
-                      <div className="h-4 bg-accent-red/40 rounded w-4/6" />
-                      <div className="h-4 bg-accent-blue/30 rounded w-full" />
-                      <div className="h-4 bg-accent-blue-light/30 rounded w-3/6" />
+                    <div className="w-full h-full p-2 relative z-10 flex flex-col">
+                      <div className="bg-primary-medium/80 p-3 rounded-t-md border-b border-accent-blue/20 flex items-center">
+                        <div className="h-3 w-3 rounded-full bg-accent-red mr-2 animate-pulse"></div>
+                        <div className="text-sm font-semibold text-accent-blue-light">Vulnerability Report</div>
+                      </div>
+                      
+                      <div className="flex-1 p-3 text-sm overflow-y-auto">
+                        <div className="mb-3">
+                          <div className="flex items-center text-red-500 mb-1">
+                            <AlertCircle className="h-4 w-4 mr-1" />
+                            <span className="font-medium">High Severity (3)</span>
+                          </div>
+                          <div className="pl-5 text-gray-300">
+                            <div className="mb-1">• SQL Injection at /api/users</div>
+                            <div className="mb-1">• Insecure Authentication</div>
+                            <div>• XSS Vulnerability at /comments</div>
+                          </div>
+                        </div>
+                        
+                        <div className="mb-3">
+                          <div className="flex items-center text-yellow-500 mb-1">
+                            <AlertCircle className="h-4 w-4 mr-1" />
+                            <span className="font-medium">Medium Severity (2)</span>
+                          </div>
+                          <div className="pl-5 text-gray-300">
+                            <div className="mb-1">• CSRF at /profile/update</div>
+                            <div>• Insecure Cookie Attributes</div>
+                          </div>
+                        </div>
+                        
+                        <div>
+                          <div className="flex items-center text-green-500 mb-1">
+                            <CheckCircle className="h-4 w-4 mr-1" />
+                            <span className="font-medium">Passed Tests (15)</span>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -481,16 +557,47 @@ const Home: React.FC = () => {
               viewport={{ once: true }}
               transition={{ duration: 0.5 }}
             >
-              <div className="aspect-video rounded-md overflow-hidden relative bg-primary-dark flex items-center justify-center">
-                <div className="absolute inset-0 bg-primary-dark/70" />
+              <div className="aspect-video rounded-md overflow-hidden relative bg-primary-dark tech-panel">
+                {/* Background grid effect */}
+                <div 
+                  className="absolute inset-0"
+                  style={{
+                    backgroundSize: '20px 20px',
+                    backgroundImage: `
+                      linear-gradient(to right, var(--accent-blue)/5 1px, transparent 1px),
+                      linear-gradient(to bottom, var(--accent-blue)/5 1px, transparent 1px)
+                    `,
+                    opacity: 0.3
+                  }}
+                />
                 
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <Button 
-                    size="icon"
-                    className="w-16 h-16 rounded-full bg-accent-blue/90 hover:bg-accent-blue hover:scale-110 transition-transform"
-                  >
-                    <PlayCircle className="h-8 w-8 text-white" />
-                  </Button>
+                <div className="absolute inset-0 p-3">
+                  <TerminalWindow
+                    title="Live Security Scan Demo"
+                    lines={[
+                      { text: "securescan --target https://example-ecommerce.com --mode ai-enhanced", type: "command" },
+                      { text: "Initializing AI-enhanced security scan...", type: "output" },
+                      { text: "Loading vulnerability database... done", type: "output" },
+                      { text: "Starting crawler module...", type: "output" },
+                      { text: "Discovered 24 endpoints", type: "success" },
+                      { text: "Analyzing endpoint: /api/products", type: "output" },
+                      { text: "Analyzing endpoint: /api/users/login", type: "output" },
+                      { text: "Analyzing endpoint: /api/cart", type: "output" },
+                      { text: "CRITICAL VULNERABILITY DETECTED: SQL Injection at /api/products?category=1", type: "error" },
+                      { text: "Scanning authentication mechanisms...", type: "output" },
+                      { text: "VULNERABILITY DETECTED: Weak password policy", type: "error" },
+                      { text: "Analyzing session management...", type: "output" },
+                      { text: "VULNERABILITY DETECTED: Insecure session cookies", type: "error" },
+                      { text: "AI Analysis: 3 high severity issues detected", type: "output" },
+                      { text: "Generating detailed report with remediation steps...", type: "output" },
+                      { text: "Report completed. View at: https://securescan.ai/reports/ec12fd", type: "success" }
+                    ]}
+                    prompt="$"
+                    autoType={true}
+                    typingSpeed={30}
+                    height="100%"
+                    blinkCursor={true}
+                  />
                 </div>
               </div>
             </motion.div>
