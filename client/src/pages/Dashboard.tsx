@@ -195,8 +195,8 @@ const Dashboard: React.FC = () => {
                   </li>
                   <li>
                     <Link href="/dashboard/reports">
-                      <a 
-                        className={`flex items-center px-4 py-3 rounded-lg transition-colors ${
+                      <div 
+                        className={`flex items-center px-4 py-3 rounded-lg transition-colors cursor-pointer ${
                           activeSection === 'reports' 
                             ? 'bg-accent-blue/20 text-accent-blue' 
                             : 'text-gray-300 hover:text-gray-100 hover:bg-primary-medium/50'
@@ -206,13 +206,13 @@ const Dashboard: React.FC = () => {
                         <BarChart3 className="mr-3 h-5 w-5" />
                         <span>Reports</span>
                         <ChevronRight className="ml-auto h-5 w-5" />
-                      </a>
+                      </div>
                     </Link>
                   </li>
                   <li>
                     <Link href="/dashboard/settings">
-                      <a 
-                        className={`flex items-center px-4 py-3 rounded-lg transition-colors ${
+                      <div 
+                        className={`flex items-center px-4 py-3 rounded-lg transition-colors cursor-pointer ${
                           activeSection === 'settings' 
                             ? 'bg-accent-blue/20 text-accent-blue' 
                             : 'text-gray-300 hover:text-gray-100 hover:bg-primary-medium/50'
@@ -222,7 +222,7 @@ const Dashboard: React.FC = () => {
                         <Settings className="mr-3 h-5 w-5" />
                         <span>Settings</span>
                         <ChevronRight className="ml-auto h-5 w-5" />
-                      </a>
+                      </div>
                     </Link>
                   </li>
                 </ul>
