@@ -97,50 +97,50 @@ const Dashboard: React.FC = () => {
             <ul className="space-y-2">
               <li>
                 <Link href="/dashboard">
-                  <a className={`flex items-center px-4 py-3 rounded-lg transition-colors ${
+                  <div className={`flex items-center px-4 py-3 rounded-lg transition-colors cursor-pointer ${
                     activeSection === 'home' 
                       ? 'bg-accent-blue/20 text-accent-blue' 
                       : 'text-gray-300 hover:text-gray-100 hover:bg-primary-medium/50'
                   }`}>
                     <LayoutDashboard className="mr-3 h-5 w-5" />
                     <span>Dashboard</span>
-                  </a>
+                  </div>
                 </Link>
               </li>
               <li>
                 <Link href="/dashboard/scans">
-                  <a className={`flex items-center px-4 py-3 rounded-lg transition-colors ${
+                  <div className={`flex items-center px-4 py-3 rounded-lg transition-colors cursor-pointer ${
                     activeSection === 'scans' 
                       ? 'bg-accent-blue/20 text-accent-blue' 
                       : 'text-gray-300 hover:text-gray-100 hover:bg-primary-medium/50'
                   }`}>
                     <Search className="mr-3 h-5 w-5" />
                     <span>Scan Manager</span>
-                  </a>
+                  </div>
                 </Link>
               </li>
               <li>
                 <Link href="/dashboard/reports">
-                  <a className={`flex items-center px-4 py-3 rounded-lg transition-colors ${
+                  <div className={`flex items-center px-4 py-3 rounded-lg transition-colors cursor-pointer ${
                     activeSection === 'reports' 
                       ? 'bg-accent-blue/20 text-accent-blue' 
                       : 'text-gray-300 hover:text-gray-100 hover:bg-primary-medium/50'
                   }`}>
                     <BarChart3 className="mr-3 h-5 w-5" />
                     <span>Reports</span>
-                  </a>
+                  </div>
                 </Link>
               </li>
               <li>
                 <Link href="/dashboard/settings">
-                  <a className={`flex items-center px-4 py-3 rounded-lg transition-colors ${
+                  <div className={`flex items-center px-4 py-3 rounded-lg transition-colors cursor-pointer ${
                     activeSection === 'settings' 
                       ? 'bg-accent-blue/20 text-accent-blue' 
                       : 'text-gray-300 hover:text-gray-100 hover:bg-primary-medium/50'
                   }`}>
                     <Settings className="mr-3 h-5 w-5" />
                     <span>Settings</span>
-                  </a>
+                  </div>
                 </Link>
               </li>
             </ul>
@@ -163,8 +163,8 @@ const Dashboard: React.FC = () => {
                 <ul className="space-y-4">
                   <li>
                     <Link href="/dashboard">
-                      <a 
-                        className={`flex items-center px-4 py-3 rounded-lg transition-colors ${
+                      <div 
+                        className={`flex items-center px-4 py-3 rounded-lg transition-colors cursor-pointer ${
                           activeSection === 'home' 
                             ? 'bg-accent-blue/20 text-accent-blue' 
                             : 'text-gray-300 hover:text-gray-100 hover:bg-primary-medium/50'
@@ -174,13 +174,13 @@ const Dashboard: React.FC = () => {
                         <LayoutDashboard className="mr-3 h-5 w-5" />
                         <span>Dashboard</span>
                         <ChevronRight className="ml-auto h-5 w-5" />
-                      </a>
+                      </div>
                     </Link>
                   </li>
                   <li>
                     <Link href="/dashboard/scans">
-                      <a 
-                        className={`flex items-center px-4 py-3 rounded-lg transition-colors ${
+                      <div 
+                        className={`flex items-center px-4 py-3 rounded-lg transition-colors cursor-pointer ${
                           activeSection === 'scans' 
                             ? 'bg-accent-blue/20 text-accent-blue' 
                             : 'text-gray-300 hover:text-gray-100 hover:bg-primary-medium/50'
@@ -190,7 +190,7 @@ const Dashboard: React.FC = () => {
                         <Search className="mr-3 h-5 w-5" />
                         <span>Scan Manager</span>
                         <ChevronRight className="ml-auto h-5 w-5" />
-                      </a>
+                      </div>
                     </Link>
                   </li>
                   <li>

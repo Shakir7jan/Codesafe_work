@@ -3,11 +3,49 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    --primary-dark: #0a0e17;
+    --primary-medium: #141c2e;
+    --accent-blue: #3b82f6;
+    --accent-blue-dark: #1e40af;
+  }
+  
   * {
     @apply border-border;
   }
 
   body {
-    @apply font-sans antialiased bg-background text-foreground;
+    @apply font-sans antialiased bg-primary-dark text-gray-100;
+    background-color: var(--primary-dark);
+  }
+}
+
+@layer components {
+  .bg-primary-dark {
+    background-color: var(--primary-dark);
+  }
+  
+  .bg-primary-medium {
+    background-color: var(--primary-medium);
+  }
+  
+  .text-accent-blue {
+    color: var(--accent-blue);
+  }
+  
+  .border-accent-blue {
+    border-color: var(--accent-blue);
+  }
+  
+  .bg-accent-blue {
+    background-color: var(--accent-blue);
+  }
+  
+  .hover\:bg-accent-blue:hover {
+    background-color: var(--accent-blue);
+  }
+  
+  .bg-radial-gradient-accent-blue {
+    background: radial-gradient(circle at center, rgba(59, 130, 246, 0.15) 0%, rgba(10, 14, 23, 0) 70%);
   }
 }
