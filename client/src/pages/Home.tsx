@@ -16,7 +16,6 @@ import {
   Star,
   ArrowRight
 } from 'lucide-react';
-import RadarAnimation from '../components/RadarAnimation';
 import GridBackground from '../components/GridBackground';
 import CodeSnippet from '../components/CodeSnippet';
 import TerminalWindow from '../components/TerminalWindow';
@@ -26,6 +25,8 @@ import { Textarea } from '../components/ui/textarea';
 import { Card, CardContent } from '../components/ui/card';
 import { Separator } from '../components/ui/separator';
 import { toast } from '../hooks/use-toast';
+import { HeroSection } from '../components/hero/HeroSection';
+import RadarAnimation from '../components/RadarAnimation';
 
 const Home: React.FC = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -63,7 +64,7 @@ const Home: React.FC = () => {
         <div className="container mx-auto px-4 py-3 flex justify-between items-center">
           <div className="flex items-center space-x-2">
             <Shield className="h-8 w-8 text-accent-blue" />
-            <span className="text-xl font-bold tracking-tight">SecureScan<span className="text-accent-blue">AI</span></span>
+            <span className="text-xl font-bold tracking-tight">CodeSafe<span className="text-accent-blue">AI</span></span>
           </div>
           
           <div className="hidden md:flex items-center space-x-8">
@@ -135,115 +136,8 @@ const Home: React.FC = () => {
         </motion.div>
       </nav>
 
-      {/* Hero Section */}
-      <section className="pt-24 pb-16 md:pt-32 md:pb-24 relative overflow-hidden">
-        <div className="absolute inset-0 bg-radial-gradient-accent-blue" />
-        <GridBackground opacity={0.3} gridSize={30} />
-        
-        <div className="container mx-auto px-4 flex flex-col lg:flex-row items-center">
-          <div className="lg:w-1/2 space-y-6 z-10 text-center lg:text-left">
-            <motion.div
-              className="relative"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5 }}
-            >
-              <div className="hidden lg:block absolute -left-4 top-0 bottom-0 w-1 bg-gradient-to-b from-accent-blue to-accent-blue-light opacity-70"></div>
-              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold leading-tight">
-                <span className="bg-clip-text text-transparent bg-gradient-to-r from-gray-100 to-gray-300">Secure Your Web Apps</span>
-                <span className="block blue-gradient-text">With AI-Enhanced Security Scans</span>
-              </h1>
-            </motion.div>
-            
-            <motion.div
-              className="relative blue-highlight-bar"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.2 }}
-            >
-              <p className="text-lg sm:text-xl text-gray-300 lg:pr-10">
-                Identify vulnerabilities in AI-generated and traditional web apps with our 
-                comprehensive security scanning solution built on <span className="text-accent-blue-light font-medium">ZAP technology</span>.
-              </p>
-            </motion.div>
-            
-            <motion.div 
-              className="pt-4 flex flex-col sm:flex-row gap-4 justify-center lg:justify-start"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.4 }}
-            >
-              <Link href="/signup">
-                <Button 
-                  className="bg-gradient-to-r from-accent-blue to-accent-blue-dark text-white font-semibold shadow-lg shadow-accent-blue/20 hover:shadow-xl hover:shadow-accent-blue/30 transition-all blue-glow-border-lg"
-                  size="lg"
-                >
-                  Start Free Scan
-                </Button>
-              </Link>
-              <Button 
-                onClick={() => handleScrollTo('how-it-works')}
-                variant="outline" 
-                className="border-accent-blue text-accent-blue-light hover:bg-accent-blue/10 hover:text-accent-blue-light transition-all blue-glow-border"
-                size="lg"
-              >
-                See How It Works
-              </Button>
-            </motion.div>
-            
-            <motion.div 
-              className="flex items-center gap-x-2 pt-6 justify-center lg:justify-start"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.5, delay: 0.6 }}
-            >
-              <div className="flex -space-x-2">
-                <div className="w-8 h-8 rounded-full bg-accent-blue/30 flex items-center justify-center border-2 border-primary-dark">
-                  <span className="text-xs">JD</span>
-                </div>
-                <div className="w-8 h-8 rounded-full bg-accent-green/30 flex items-center justify-center border-2 border-primary-dark">
-                  <span className="text-xs">RB</span>
-                </div>
-                <div className="w-8 h-8 rounded-full bg-accent-red/30 flex items-center justify-center border-2 border-primary-dark">
-                  <span className="text-xs">MS</span>
-                </div>
-              </div>
-              <p className="text-gray-400 text-sm">Trusted by <span className="text-white font-medium">2,500+</span> developers</p>
-            </motion.div>
-          </div>
-          
-          <motion.div 
-            className="lg:w-1/2 flex justify-center mt-12 lg:mt-0 z-10"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 1, delay: 0.4 }}
-          >
-            <div className="relative">
-              {/* Glow effect behind radar */}
-              <div className="absolute -inset-4 bg-accent-blue/5 rounded-full blur-3xl"></div>
-              
-              <motion.div
-                animate={{ y: [0, -10, 0] }}
-                transition={{ duration: 6, repeat: Infinity, repeatType: "reverse" }}
-                className="relative"
-              >
-                <RadarAnimation 
-                  size="min(350px, 100%)" 
-                  className="sm:scale-100 scale-90"
-                />
-                
-                {/* Animated security text labels */}
-                <div className="absolute top-0 -right-4 sm:right-0 bg-accent-blue/10 px-3 py-1 rounded-full text-xs font-mono text-accent-blue-light border border-accent-blue/30 animate-pulse">
-                  Scan in progress...
-                </div>
-                <div className="absolute -bottom-2 -left-4 sm:left-0 bg-red-500/10 px-3 py-1 rounded-full text-xs font-mono text-red-400 border border-red-500/30 animate-pulse" style={{ animationDelay: '1s' }}>
-                  Threats detected
-                </div>
-              </motion.div>
-            </div>
-          </motion.div>
-        </div>
-      </section>
+      {/* New Hero Section */}
+      <HeroSection />
 
       {/* Clients Section */}
       <section className="py-12 bg-primary-medium/50 backdrop-blur-sm border-y border-accent-blue/10">
@@ -369,7 +263,7 @@ const Home: React.FC = () => {
               transition={{ duration: 0.5 }}
             >
               <h2 className="text-3xl md:text-4xl font-bold mb-4 blue-gradient-text">
-                How SecureScan AI Works
+                How CodeSafe AI Works
               </h2>
             </motion.div>
             <motion.p 
@@ -439,7 +333,7 @@ const Home: React.FC = () => {
                       <TerminalWindow
                         title="Security Scan Setup"
                         lines={[
-                          { text: "securescanner init", type: "command" },
+                          { text: "codesafescanner init", type: "command" },
                           { text: "Initializing security scan...", type: "output" },
                           { text: "Enter target URL:", type: "output" },
                           { text: "https://yourwebapp.com", type: "command" },
@@ -566,7 +460,7 @@ class AIScanner extends BaseScanner {
               viewport={{ once: true }}
               transition={{ duration: 0.5 }}
             >
-              <h2 className="text-3xl md:text-4xl font-bold mb-6">See SecureScan AI in Action</h2>
+              <h2 className="text-3xl md:text-4xl font-bold mb-6">See CodeSafe AI in Action</h2>
               <p className="text-lg text-gray-300 mb-6">
                 Watch how our platform detects vulnerabilities in real-time, providing actionable insights to secure your web applications.
               </p>
@@ -613,7 +507,7 @@ class AIScanner extends BaseScanner {
                   <TerminalWindow
                     title="Live Security Scan Demo"
                     lines={[
-                      { text: "securescan --target https://example-ecommerce.com --mode ai-enhanced", type: "command" },
+                      { text: "codesafescan --target https://example-ecommerce.com --mode ai-enhanced", type: "command" },
                       { text: "Initializing AI-enhanced security scan...", type: "output" },
                       { text: "Loading vulnerability database... done", type: "output" },
                       { text: "Starting crawler module...", type: "output" },
@@ -628,7 +522,7 @@ class AIScanner extends BaseScanner {
                       { text: "VULNERABILITY DETECTED: Insecure session cookies", type: "error" },
                       { text: "AI Analysis: 3 high severity issues detected", type: "output" },
                       { text: "Generating detailed report with remediation steps...", type: "output" },
-                      { text: "Report completed. View at: https://securescan.ai/reports/ec12fd", type: "success" }
+                      { text: "Report completed. View at: https://codesafe.ai/reports/ec12fd", type: "success" }
                     ]}
                     prompt="$"
                     autoType={true}
@@ -786,26 +680,26 @@ class AIScanner extends BaseScanner {
               viewport={{ once: true }}
               transition={{ duration: 0.5, delay: 0.2 }}
             >
-              Hear from developers and businesses using SecureScan AI
+              Hear from developers and businesses using CodeSafe AI
             </motion.p>
           </div>
           
           <div className="grid md:grid-cols-3 gap-8">
             {[
               {
-                review: "SecureScan AI detected critical vulnerabilities in our AI-generated web app that we would have missed. The detailed reports helped us fix issues quickly before launch.",
+                review: "CodeSafe AI detected critical vulnerabilities in our AI-generated web app that we would have missed. The detailed reports helped us fix issues quickly before launch.",
                 name: "Sarah Johnson",
                 role: "CTO, TechStart",
                 initials: "SJ"
               },
               {
-                review: "As a non-technical founder using AI to build my startup's website, SecureScan AI was a game-changer. It's easy to use and the reports are clear even for someone without a security background.",
+                review: "As a non-technical founder using AI to build my startup's website, CodeSafe AI was a game-changer. It's easy to use and the reports are clear even for someone without a security background.",
                 name: "Michael Chang",
                 role: "Founder, EcoVision",
                 initials: "MC"
               },
               {
-                review: "We needed a solution that could keep up with our rapid development cycles. SecureScan AI integrates perfectly with our CI/CD pipeline, ensuring security at every stage of deployment.",
+                review: "We needed a solution that could keep up with our rapid development cycles. CodeSafe AI integrates perfectly with our CI/CD pipeline, ensuring security at every stage of deployment.",
                 name: "Elena Rodriguez",
                 role: "DevOps Lead, CloudFlex",
                 initials: "ER"
@@ -951,12 +845,12 @@ class AIScanner extends BaseScanner {
           <div className="flex flex-col md:flex-row justify-between items-center pt-8 border-t border-accent-blue/10">
             <div className="flex items-center mb-4 md:mb-0">
               <Shield className="h-8 w-8 text-accent-blue mr-2" />
-              <span className="text-xl font-bold tracking-tight">SecureScan<span className="text-accent-blue">AI</span></span>
+              <span className="text-xl font-bold tracking-tight">CodeSafe<span className="text-accent-blue">AI</span></span>
             </div>
           </div>
           
           <div className="text-center text-gray-500 text-sm mt-8">
-            &copy; {new Date().getFullYear()} SecureScan AI. All rights reserved.
+            &copy; {new Date().getFullYear()} CodeSafe AI. All rights reserved.
           </div>
         </div>
       </footer>

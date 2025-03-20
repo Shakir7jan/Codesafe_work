@@ -248,4 +248,10 @@
   .animate-loading {
     animation: loading 2s ease-in-out infinite;
   }
+
+  @keyframes radar-rotate {
+    100% {
+      rotate: 1turn;
+    }
+  }
 }
