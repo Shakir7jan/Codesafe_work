@@ -1,162 +1,228 @@
-import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import React, { useEffect, useRef, useState } from 'react';
 import { Shield, Bug, AlertTriangle } from 'lucide-react';
 
-interface Bug {
-  id: number;
-  top: string;
-  left: string;
-  animationPath: string;
-  size: string;
-  color: 'red' | 'green';
+interface ThreatPoint {
+  x: number;
+  y: number;
+  type: 'threat' | 'secure';
 }
 
-const RadarAnimation: React.FC = () => {
-  const [bugs, setBugs] = useState<Bug[]>([]);
-  const [radarAngle, setRadarAngle] = useState(0);
-  
-  // Generate random bugs
+interface RadarAnimationProps {
+  className?: string;
+  size?: string;
+  width?: string;
+  height?: string;
+}
+
+const RadarAnimation: React.FC<RadarAnimationProps> = ({ 
+  className = "",
+  size = "300px",
+  width,
+  height
+}) => {
+  const radarRef = useRef<HTMLDivElement>(null);
+  const [radarInitialized, setRadarInitialized] = useState(false);
+
+  // Predefined threat points
+  const threatPoints: ThreatPoint[] = [
+    { x: 0.7, y: 0.2, type: 'threat' },
+    { x: 0.2, y: 0.3, type: 'secure' },
+    { x: 0.6, y: 0.1, type: 'threat' },
+    { x: 0.4, y: 0.6, type: 'secure' },
+    { x: 0.9, y: 0.7, type: 'threat' },
+    { x: 0.3, y: 0.8, type: 'secure' },
+    { x: 0.8, y: 0.4, type: 'threat' },
+  ];
+
   useEffect(() => {
-    const generateBugs = () => {
-      const newBugs: Bug[] = [];
+    if (!radarRef.current || radarInitialized) return;
+    
+    // Initialize radar animation
+    const radar = radarRef.current;
+    const beam = radar.querySelector(".beam") as HTMLElement;
+    const dots = radar.querySelectorAll(".dot") as NodeListOf<HTMLElement>;
+
+    const getCSSVal = (e: HTMLElement, v: string) => e.style.getPropertyValue(v);
+    const mod = (n: number, m: number) => ((n % m) + m) % m; // Fix negative Modulo
+    const PI = Math.PI;
+    const TAU = PI * 2;
+
+    const update = () => {
+      const beamStyle = getComputedStyle(beam);
+      const beamAngleStr = beamStyle.getPropertyValue("rotate") || 
+                           beamStyle.getPropertyValue("transform");
       
-      for (let i = 0; i < 5; i++) {
-        // Create random position for bugs
-        const angle = Math.random() * Math.PI * 2;
-        const distance = 40 + Math.random() * 40; // % from center
-        
-        const top = `${50 - Math.cos(angle) * distance}%`;
-        const left = `${50 + Math.sin(angle) * distance}%`;
-        
-        // Create random animation paths
-        const endAngle = Math.random() * Math.PI * 2;
-        const endDistance = 5 + Math.random() * 15;
-        const endTop = 50 - Math.cos(endAngle) * endDistance;
-        const endLeft = 50 + Math.sin(endAngle) * endDistance;
-        
-        const animationPath = `M${50 + Math.sin(angle) * distance},${50 - Math.cos(angle) * distance} Q${50},${50} ${endLeft},${endTop}`;
-        
-        newBugs.push({
-          id: i,
-          top,
-          left,
-          animationPath,
-          size: `${1 + Math.random() * 1.5}rem`,
-          color: Math.random() > 0.5 ? 'red' : 'green'
-        });
+      // Extract rotation angle from transform string
+      let beamAngle = 0;
+      if (beamAngleStr) {
+        const match = beamAngleStr.match(/rotate\(([^)]+)deg\)/);
+        if (match && match[1]) {
+          beamAngle = parseFloat(match[1]) * PI / 180;
+        }
       }
-      
-      setBugs(newBugs);
+
+      dots.forEach(dot => {
+        const x = parseFloat(getCSSVal(dot, "--x") || "0.5") - 0.5;
+        const y = parseFloat(getCSSVal(dot, "--y") || "0.5") - 0.5;
+        const dotAngle = mod(Math.atan2(y, x), TAU);
+        const angleOffset = mod(dotAngle - beamAngle, TAU);
+        const opacity = 1 - (angleOffset / TAU);
+        
+        // Enhanced glow effect when dot is detected by the radar beam
+        if (opacity > 0.9) {
+          const glowIntensity = Math.min(1, (opacity - 0.9) * 10);
+          const type = dot.getAttribute('data-type');
+          const color = type === 'threat' ? 'rgba(239, 68, 68, ' : 'rgba(34, 197, 94, ';
+          dot.style.boxShadow = `0 0 15px 5px ${color}${glowIntensity})`;
+        } else {
+          const type = dot.getAttribute('data-type');
+          const color = type === 'threat' ? 'rgba(239, 68, 68, 0.5)' : 'rgba(34, 197, 94, 0.5)';
+          dot.style.boxShadow = `0 0 8px 3px ${color}`;
+        }
+        
+        dot.style.opacity = String(opacity * opacity); // Squared for more dramatic effect
+      });
+
+      requestAnimationFrame(update);
     };
     
-    generateBugs();
+    // Start animation
+    const frameId = requestAnimationFrame(update);
+    setRadarInitialized(true);
     
-    // Regenerate bugs every 8 seconds
-    const interval = setInterval(generateBugs, 8000);
-    return () => clearInterval(interval);
-  }, []);
-  
-  // Rotate radar
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setRadarAngle(prev => (prev + 1) % 360);
-    }, 40);
-    
-    return () => clearInterval(interval);
-  }, []);
+    return () => cancelAnimationFrame(frameId);
+  }, [radarInitialized]);
+
+  const dimensions = width && height 
+    ? { width, height } 
+    : { width: size, height: size, aspectRatio: '1' };
 
   return (
-    <div className="relative h-80 w-full max-w-md mx-auto rounded-full overflow-hidden blue-glow-border">
-      {/* Background grid */}
-      <div className="absolute inset-0 opacity-30">
+    <div 
+      ref={radarRef} 
+      className={`radar relative ${className}`}
+      style={{ 
+        ...dimensions,
+        background: 'radial-gradient(circle, rgba(20, 28, 46, 0.9) 0%, rgba(10, 14, 23, 0.95) 70%)',
+        borderRadius: '50%',
+        boxShadow: '0 0 30px rgba(59, 130, 246, 0.3), inset 0 0 20px rgba(59, 130, 246, 0.1)',
+        overflow: 'hidden'
+      }}
+    >
+      {/* Background grid pattern */}
+      <div className="absolute inset-0 opacity-20">
         <div 
           className="w-full h-full" 
           style={{
             backgroundImage: `
-              radial-gradient(circle, transparent 0%, transparent 70%, var(--accent-blue) 100%),
-              conic-gradient(from 0deg, var(--accent-blue-light) 0%, transparent 5%, transparent 95%, var(--accent-blue-light) 100%),
-              conic-gradient(from 90deg, var(--accent-blue-light) 0%, transparent 5%, transparent 95%, var(--accent-blue-light) 100%),
-              radial-gradient(circle at center, var(--accent-blue) 0%, transparent 30%)
+              radial-gradient(circle, rgba(59, 130, 246, 0.1) 0%, transparent 70%),
+              linear-gradient(0deg, transparent 49.9%, rgba(59, 130, 246, 0.1) 50%, transparent 50.1%),
+              linear-gradient(90deg, transparent 49.9%, rgba(59, 130, 246, 0.1) 50%, transparent 50.1%)
             `,
-            backgroundSize: '100% 100%, 100% 100%, 100% 100%, 100% 100%'
+            backgroundSize: '100% 100%, 40px 40px, 40px 40px'
           }}
         />
-        
-        {/* Radar circles */}
-        {[1, 2, 3].map((i) => (
-          <div 
-            key={i}
-            className="absolute inset-0 rounded-full border border-accent-blue/30"
-            style={{ transform: `scale(${i * 0.25})` }}
-          />
-        ))}
-        
-        {/* Radar crosshairs */}
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className="w-full h-px bg-accent-blue/20" />
-        </div>
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className="h-full w-px bg-accent-blue/20" />
-        </div>
       </div>
       
-      {/* Radar sweep */}
+      {/* Radar circles */}
+      <div className="absolute inset-0 border border-accent-blue/15 rounded-full"></div>
+      <div className="absolute inset-[15%] border border-accent-blue/20 rounded-full"></div>
+      <div className="absolute inset-[30%] border border-accent-blue/25 rounded-full"></div>
+      <div className="absolute inset-[45%] border border-accent-blue/30 rounded-full"></div>
+      <div className="absolute inset-[60%] border border-accent-blue/35 rounded-full"></div>
+      <div className="absolute inset-[75%] border border-accent-blue/40 rounded-full"></div>
+      
+      {/* Crosshairs */}
+      <div className="absolute inset-0 flex items-center">
+        <div className="w-full h-[1px] bg-accent-blue/30"></div>
+      </div>
+      <div className="absolute inset-0 flex justify-center">
+        <div className="h-full w-[1px] bg-accent-blue/30"></div>
+      </div>
+      
+      {/* Rotating beam */}
       <div 
-        className="absolute inset-0 origin-center" 
-        style={{ transform: `rotate(${radarAngle}deg)` }}
-      >
-        <div className="absolute top-1/2 left-1/2 w-1/2 h-1 bg-gradient-to-r from-transparent to-accent-blue-light opacity-70" />
-        
-        {/* Pulse effect at the center */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
-          <motion.div 
-            className="w-4 h-4 rounded-full bg-accent-blue-light"
-            animate={{ 
-              scale: [1, 1.5, 1],
-              opacity: [0.7, 0.3, 0.7] 
-            }}
-            transition={{ 
-              duration: 2,
-              repeat: Infinity,
-              ease: "easeInOut"
-            }}
-          />
-        </div>
+        className="beam absolute top-0 left-0 w-full h-full" 
+        style={{
+          background: 'linear-gradient(90deg, transparent 50%, rgba(59, 130, 246, 0.4) 85%, rgba(96, 165, 250, 0.6) 100%)',
+          animation: '5s rotate linear infinite',
+          transformOrigin: 'center'
+        }}
+      ></div>
+      
+      {/* Center point */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10">
+        <div className="w-4 h-4 rounded-full bg-accent-blue-light animate-pulse"></div>
       </div>
       
-      {/* Center Shield Icon */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-accent-blue-light">
-        <Shield className="w-12 h-12 opacity-70" />
+      {/* Shield Icon */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-accent-blue-light opacity-20 z-0">
+        <Shield className="w-20 h-20" />
       </div>
       
-      {/* Animated bugs */}
-      {bugs.map((bug) => (
-        <motion.div
-          key={bug.id}
-          className="absolute"
-          initial={{ top: bug.top, left: bug.left }}
-          animate={{
-            top: '50%',
-            left: '50%',
-            opacity: [1, 0.7, 0]
-          }}
-          transition={{
-            duration: 3 + Math.random() * 4,
-            ease: "easeInOut",
-            delay: Math.random() * 2
-          }}
-          style={{ 
-            translateX: '-50%',
-            translateY: '-50%'
+      {/* Threat & secure dots */}
+      {threatPoints.map((point, idx) => (
+        <div 
+          key={idx}
+          className="dot absolute" 
+          data-type={point.type}
+          style={{
+            '--x': point.x,
+            '--y': point.y,
+            left: `calc(${point.x} * 100%)`,
+            top: `calc(${point.y} * 100%)`,
+            width: '6px',
+            height: '6px',
+            margin: '-3px',
+            borderRadius: '50%',
+            background: point.type === 'threat' ? '#ef4444' : '#22c55e',
+            boxShadow: point.type === 'threat' 
+              ? '0 0 8px 3px rgba(239, 68, 68, 0.5)' 
+              : '0 0 8px 3px rgba(34, 197, 94, 0.5)',
+            opacity: 0,
+            zIndex: 5
+          } as React.CSSProperties}
+        ></div>
+      ))}
+      
+      {/* Icon indicators that appear with dots */}
+      {threatPoints.map((point, idx) => (
+        <div 
+          key={`icon-${idx}`}
+          className="absolute z-10" 
+          style={{
+            left: `calc(${point.x} * 100%)`,
+            top: `calc(${point.y} * 100%)`,
+            transform: 'translate(-50%, -50%)',
+            opacity: 0,
+            animation: `pulse-fade 5s ${idx * 0.7}s infinite`,
           }}
         >
-          {bug.color === 'red' ? (
-            <AlertTriangle className="text-red-500" style={{ width: bug.size, height: bug.size }} />
+          {point.type === 'threat' ? (
+            <AlertTriangle className="w-5 h-5 text-red-500" />
           ) : (
-            <Bug className="text-green-400" style={{ width: bug.size, height: bug.size }} />
+            <Bug className="w-5 h-5 text-green-500" />
           )}
-        </motion.div>
+        </div>
       ))}
+      
+      <style dangerouslySetInnerHTML={{
+        __html: `
+          @keyframes rotate {
+            0% {
+              transform: rotate(0turn);
+            }
+            100% {
+              transform: rotate(1turn);
+            }
+          }
+          
+          @keyframes pulse-fade {
+            0%, 20%, 80%, 100% { opacity: 0; }
+            40%, 60% { opacity: 0.8; }
+          }
+        `
+      }} />
     </div>
   );
 };

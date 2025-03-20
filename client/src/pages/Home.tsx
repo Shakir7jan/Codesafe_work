@@ -116,20 +116,20 @@ const Home: React.FC = () => {
       </nav>
 
       {/* Hero Section */}
-      <section className="pt-32 pb-16 md:py-32 relative overflow-hidden">
+      <section className="pt-24 pb-16 md:pt-32 md:pb-24 relative overflow-hidden">
         <div className="absolute inset-0 bg-radial-gradient-accent-blue" />
         <GridBackground opacity={0.3} gridSize={30} />
         
-        <div className="container mx-auto px-4 flex flex-col md:flex-row items-center">
-          <div className="md:w-1/2 space-y-6 z-10">
+        <div className="container mx-auto px-4 flex flex-col lg:flex-row items-center">
+          <div className="lg:w-1/2 space-y-6 z-10 text-center lg:text-left">
             <motion.div
               className="relative"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5 }}
             >
-              <div className="absolute -left-4 top-0 bottom-0 w-1 bg-gradient-to-b from-accent-blue to-accent-blue-light opacity-70"></div>
-              <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold leading-tight">
+              <div className="hidden lg:block absolute -left-4 top-0 bottom-0 w-1 bg-gradient-to-b from-accent-blue to-accent-blue-light opacity-70"></div>
+              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold leading-tight">
                 <span className="bg-clip-text text-transparent bg-gradient-to-r from-gray-100 to-gray-300">Secure Your Web Apps</span>
                 <span className="block blue-gradient-text">With AI-Enhanced Security Scans</span>
               </h1>
@@ -141,21 +141,21 @@ const Home: React.FC = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.2 }}
             >
-              <p className="text-xl text-gray-300 md:pr-10">
+              <p className="text-lg sm:text-xl text-gray-300 lg:pr-10">
                 Identify vulnerabilities in AI-generated and traditional web apps with our 
                 comprehensive security scanning solution built on <span className="text-accent-blue-light font-medium">ZAP technology</span>.
               </p>
             </motion.div>
             
             <motion.div 
-              className="pt-4 flex flex-col sm:flex-row gap-4"
+              className="pt-4 flex flex-col sm:flex-row gap-4 justify-center lg:justify-start"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.4 }}
             >
               <Button 
                 onClick={scrollToContact}
-                className="bg-accent-blue hover:bg-accent-blue/90 text-white font-semibold hover:shadow-lg hover:shadow-accent-blue/20 transition-all blue-glow-border-lg"
+                className="bg-gradient-to-r from-accent-blue to-accent-blue-dark text-white font-semibold shadow-lg shadow-accent-blue/20 hover:shadow-xl hover:shadow-accent-blue/30 transition-all blue-glow-border-lg"
                 size="lg"
               >
                 Start Free Scan
@@ -163,7 +163,7 @@ const Home: React.FC = () => {
               <Button 
                 onClick={() => handleScrollTo('how-it-works')}
                 variant="outline" 
-                className="border-accent-blue/60 text-accent-blue hover:bg-accent-blue/10 hover:text-accent-blue transition-all blue-glow-border"
+                className="border-accent-blue text-accent-blue-light hover:bg-accent-blue/10 hover:text-accent-blue-light transition-all blue-glow-border"
                 size="lg"
               >
                 See How It Works
@@ -171,7 +171,7 @@ const Home: React.FC = () => {
             </motion.div>
             
             <motion.div 
-              className="flex items-center gap-x-2 pt-6"
+              className="flex items-center gap-x-2 pt-6 justify-center lg:justify-start"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 0.5, delay: 0.6 }}
@@ -192,17 +192,34 @@ const Home: React.FC = () => {
           </div>
           
           <motion.div 
-            className="md:w-1/2 flex justify-center mt-10 md:mt-0 z-10"
+            className="lg:w-1/2 flex justify-center mt-12 lg:mt-0 z-10"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 1, delay: 0.4 }}
           >
-            <motion.div
-              animate={{ y: [0, -10, 0] }}
-              transition={{ duration: 6, repeat: Infinity, repeatType: "reverse" }}
-            >
-              <RadarAnimation />
-            </motion.div>
+            <div className="relative">
+              {/* Glow effect behind radar */}
+              <div className="absolute -inset-4 bg-accent-blue/5 rounded-full blur-3xl"></div>
+              
+              <motion.div
+                animate={{ y: [0, -10, 0] }}
+                transition={{ duration: 6, repeat: Infinity, repeatType: "reverse" }}
+                className="relative"
+              >
+                <RadarAnimation 
+                  size="min(350px, 100%)" 
+                  className="sm:scale-100 scale-90"
+                />
+                
+                {/* Animated security text labels */}
+                <div className="absolute top-0 -right-4 sm:right-0 bg-accent-blue/10 px-3 py-1 rounded-full text-xs font-mono text-accent-blue-light border border-accent-blue/30 animate-pulse">
+                  Scan in progress...
+                </div>
+                <div className="absolute -bottom-2 -left-4 sm:left-0 bg-red-500/10 px-3 py-1 rounded-full text-xs font-mono text-red-400 border border-red-500/30 animate-pulse" style={{ animationDelay: '1s' }}>
+                  Threats detected
+                </div>
+              </motion.div>
+            </div>
           </motion.div>
         </div>
       </section>
