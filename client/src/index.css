@@ -75,32 +75,35 @@
   }
   
   .bg-radial-gradient-accent-blue {
-    background: radial-gradient(circle at center, rgba(59, 130, 246, 0.2) 0%, rgba(10, 14, 23, 0) 70%);
+    background: radial-gradient(circle at 50% 50%, rgba(59, 130, 246, 0.1), transparent 70%);
   }
   
   /* Blue glowing border */
   .blue-glow-border {
-    box-shadow: 0 0 10px 1px rgba(59, 130, 246, 0.3);
-    border: 1px solid rgba(59, 130, 246, 0.5);
-    transition: all 0.3s ease;
+    position: relative;
+    z-index: 1;
   }
   
   .blue-glow-border:hover {
-    box-shadow: 0 0 15px 2px rgba(59, 130, 246, 0.4);
-    border: 1px solid rgba(59, 130, 246, 0.7);
+    box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
   }
   
   .blue-glow-border-lg {
-    box-shadow: 0 0 20px 2px rgba(59, 130, 246, 0.3);
-    border: 1px solid rgba(59, 130, 246, 0.5);
+    position: relative;
+    z-index: 1;
+  }
+  
+  .blue-glow-border-lg:hover {
+    box-shadow: 0 0 30px rgba(59, 130, 246, 0.4);
   }
   
   /* Blue gradient text */
   .blue-gradient-text {
-    background: linear-gradient(to right, var(--accent-blue), var(--accent-blue-light));
+    background: linear-gradient(90deg, #3b82f6, #60a5fa);
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
+    display: inline-block;
   }
   
   /* Angle-cut blue border */
@@ -130,11 +133,12 @@
   .blue-highlight-bar::before {
     content: '';
     position: absolute;
-    top: 0;
     left: 0;
-    width: 4px;
-    height: 100%;
-    background: linear-gradient(to bottom, var(--accent-blue), var(--accent-blue-light));
+    top: 0.25rem;
+    bottom: 0.25rem;
+    width: 3px;
+    background: linear-gradient(to bottom, #3b82f6, #60a5fa);
+    border-radius: 3px;
   }
   
   /* Tech panel with angled corner effect */

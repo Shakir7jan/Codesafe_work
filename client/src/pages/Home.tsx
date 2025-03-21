@@ -61,7 +61,7 @@ const Home: React.FC = () => {
     <div className="min-h-screen bg-primary-dark text-gray-100 font-sans antialiased overflow-x-hidden">
       {/* Navbar */}
       <nav className="fixed w-full bg-primary-dark/90 backdrop-blur-md z-50 border-b border-accent-blue/20">
-        <div className="container mx-auto px-4 py-3 flex justify-between items-center">
+        <div className="container mx-auto px-4 py-3 flex justify-between items-center max-w-6xl">
           <div className="flex items-center space-x-2">
             <Shield className="h-8 w-8 text-accent-blue" />
             <span className="text-xl font-bold tracking-tight">CodeSafe<span className="text-accent-blue">AI</span></span>
@@ -141,7 +141,7 @@ const Home: React.FC = () => {
 
       {/* Clients Section */}
       <section className="py-12 bg-primary-medium/50 backdrop-blur-sm border-y border-accent-blue/10">
-        <div className="container mx-auto px-4">
+        <div className="container mx-auto px-4 max-w-6xl">
           <h3 className="text-center text-gray-400 mb-8">Trusted by innovative companies</h3>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-8 items-center justify-items-center opacity-70">
             {[1, 2, 3, 4, 5, 6].map((i) => (
@@ -168,7 +168,7 @@ const Home: React.FC = () => {
         className="py-20"
         style={{ opacity: featuresOpacity }}
       >
-        <div className="container mx-auto px-4">
+        <div className="container mx-auto px-4 max-w-6xl">
           <div className="text-center max-w-3xl mx-auto mb-16">
             <motion.h2 
               className="text-3xl md:text-4xl font-bold mb-4"
@@ -253,7 +253,7 @@ const Home: React.FC = () => {
         <div className="absolute inset-0 bg-radial-gradient-accent-blue" />
         <GridBackground opacity={0.3} gridSize={25} showDots={true} />
         
-        <div className="container mx-auto px-4 relative z-10">
+        <div className="container mx-auto px-4 relative z-10 max-w-6xl">
           <div className="text-center max-w-3xl mx-auto mb-16">
             <motion.div
               className="inline-block relative blue-angled-border py-3 px-6"
@@ -451,7 +451,7 @@ class AIScanner extends BaseScanner {
 
       {/* Demo Section */}
       <section className="py-20">
-        <div className="container mx-auto px-4">
+        <div className="container mx-auto px-4 max-w-6xl">
           <div className="flex flex-col md:flex-row items-center gap-12">
             <motion.div 
               className="md:w-1/2"
@@ -542,7 +542,7 @@ class AIScanner extends BaseScanner {
         <div className="absolute inset-0 bg-radial-gradient-accent-blue" />
         <GridBackground opacity={0.12} />
         
-        <div className="container mx-auto px-4 relative z-10">
+        <div className="container mx-auto px-4 relative z-10 max-w-6xl">
           <div className="text-center max-w-3xl mx-auto mb-16">
             <motion.h2 
               className="text-3xl md:text-4xl font-bold mb-4"
@@ -662,7 +662,7 @@ class AIScanner extends BaseScanner {
 
       {/* Testimonials Section */}
       <section id="about" className="py-20">
-        <div className="container mx-auto px-4">
+        <div className="container mx-auto px-4 max-w-6xl">
           <div className="text-center max-w-3xl mx-auto mb-16">
             <motion.h2 
               className="text-3xl md:text-4xl font-bold mb-4"
@@ -739,7 +739,7 @@ class AIScanner extends BaseScanner {
         <div className="absolute inset-0 bg-radial-gradient-accent-blue" />
         <GridBackground opacity={0.12} />
         
-        <div className="container mx-auto px-4 relative z-10">
+        <div className="container mx-auto px-4 relative z-10 max-w-6xl">
           <div className="text-center max-w-3xl mx-auto">
             <motion.h2 
               className="text-3xl md:text-5xl font-bold mb-6"
@@ -819,7 +819,7 @@ class AIScanner extends BaseScanner {
 
       {/* Footer */}
       <footer className="bg-primary-dark pt-16 pb-8 border-t border-accent-blue/20">
-        <div className="container mx-auto px-4">
+        <div className="container mx-auto px-4 max-w-6xl">
           <div className="flex flex-wrap justify-center gap-8 mb-12">
             <Link to="/terms-of-service" className="text-gray-400 hover:text-accent-blue transition-colors">
               Terms of Service
