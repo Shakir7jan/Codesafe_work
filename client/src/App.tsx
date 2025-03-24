@@ -18,6 +18,7 @@ import Blog from "@/pages/Blog";
 import BlogPost from "@/pages/BlogPost";
 import Contact from "@/pages/Contact";
 import Dashboard from "@/pages/Dashboard";
+import ScanReport from "@/pages/ScanReport";
 
 import "@/components/ui/theme.css";
 
@@ -79,6 +80,15 @@ function Router() {
         {() => (
           <ProtectedRoute>
             <Dashboard />
+          </ProtectedRoute>
+        )}
+      </Route>
+      
+      {/* Direct Scan Report Access */}
+      <Route path="/scans/:scanId">
+        {(params) => (
+          <ProtectedRoute>
+            <ScanReport scanId={parseInt(params.scanId)} />
           </ProtectedRoute>
         )}
       </Route>
