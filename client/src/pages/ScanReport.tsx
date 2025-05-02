@@ -4,7 +4,7 @@ import { ScanDetailReport } from '@/components/dashboard';
 import { Helmet } from 'react-helmet';
 
 interface ScanReportProps {
-  scanId: number;
+  scanId: string;
 }
 
 const ScanReport: React.FC<ScanReportProps> = ({ scanId }) => {
@@ -13,6 +13,14 @@ const ScanReport: React.FC<ScanReportProps> = ({ scanId }) => {
   const handleBack = () => {
     setLocation('/dashboard/scans');
   };
+
+  if (!scanId) {
+    return (
+      <div className="min-h-screen bg-primary-dark text-gray-100 font-sans antialiased flex items-center justify-center">
+        <p className="text-gray-400">Invalid scan ID. Please try again.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-primary-dark text-gray-100 font-sans antialiased">
@@ -28,4 +36,4 @@ const ScanReport: React.FC<ScanReportProps> = ({ scanId }) => {
   );
 };
 
-export default ScanReport; 
+export default ScanReport;

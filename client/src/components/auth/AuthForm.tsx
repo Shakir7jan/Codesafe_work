@@ -19,6 +19,7 @@ export function AuthForm({ type, onSubmit, isLoading, error }: AuthFormProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [signupSuccess, setSignupSuccess] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,6 +29,9 @@ export function AuthForm({ type, onSubmit, isLoading, error }: AuthFormProps) {
     }
     
     await onSubmit(email, password);
+    if (type === 'signup' && !error) {
+      setSignupSuccess(true);
+    }
   };
 
   const titles = {
@@ -60,6 +64,11 @@ export function AuthForm({ type, onSubmit, isLoading, error }: AuthFormProps) {
         </CardDescription>
       </CardHeader>
       <CardContent>
+        {signupSuccess && type === 'signup' && (
+          <div className="mb-4 p-2 bg-green-900/20 border border-green-500/30 rounded text-green-400 text-sm">
+            Account created! Please check your inbox and confirm your email before logging in. If you don't see the email, check your spam folder.
+          </div>
+        )}
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
@@ -70,7 +79,7 @@ export function AuthForm({ type, onSubmit, isLoading, error }: AuthFormProps) {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="bg-primary-dark/50 border-accent-blue/20"
+              className="bg-white/10 border-accent-blue/20 text-white placeholder:text-gray-400"
             />
           </div>
           
@@ -90,7 +99,7 @@ export function AuthForm({ type, onSubmit, isLoading, error }: AuthFormProps) {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="bg-primary-dark/50 border-accent-blue/20"
+                className="bg-white/10 border-accent-blue/20 text-white placeholder:text-gray-400"
               />
             </div>
           )}
@@ -104,7 +113,7 @@ export function AuthForm({ type, onSubmit, isLoading, error }: AuthFormProps) {
                 required
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                className="bg-primary-dark/50 border-accent-blue/20"
+                className="bg-white/10 border-accent-blue/20 text-white placeholder:text-gray-400"
               />
               {password !== confirmPassword && confirmPassword && (
                 <p className="text-xs text-red-500">Passwords do not match</p>
@@ -149,4 +158,4 @@ export function AuthForm({ type, onSubmit, isLoading, error }: AuthFormProps) {
       </CardFooter>
     </Card>
   );
-} 
+}

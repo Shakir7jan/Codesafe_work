@@ -3,6 +3,7 @@ import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from "@/lib/auth-context";
+import { ScanProvider } from "@/contexts/ScanContext";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import { ErrorBoundary } from "react-error-boundary";
 
@@ -19,6 +20,7 @@ import BlogPost from "@/pages/BlogPost";
 import Contact from "@/pages/Contact";
 import Dashboard from "@/pages/Dashboard";
 import ScanReport from "@/pages/ScanReport";
+import Billing from "@/pages/Billing";
 
 import "@/components/ui/theme.css";
 
@@ -55,6 +57,13 @@ function Router() {
       <Route path="/contact" component={Contact} />
       
       {/* Protected Routes */}
+      <Route path="/billing">
+        {() => (
+          <ProtectedRoute>
+            <Billing />
+          </ProtectedRoute>
+        )}
+      </Route>
       <Route path="/dashboard">
         {() => (
           <ProtectedRoute>
@@ -88,7 +97,7 @@ function Router() {
       <Route path="/scans/:scanId">
         {(params) => (
           <ProtectedRoute>
-            <ScanReport scanId={parseInt(params.scanId)} />
+            <ScanReport scanId={params.scanId} />
           </ProtectedRoute>
         )}
       </Route>
@@ -104,8 +113,10 @@ function App() {
     <ErrorBoundary FallbackComponent={ErrorFallback}>
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
-          <Router />
-          <Toaster />
+          <ScanProvider>
+            <Router />
+            <Toaster />
+          </ScanProvider>
         </AuthProvider>
       </QueryClientProvider>
     </ErrorBoundary>

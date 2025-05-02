@@ -93,4 +93,15 @@ export async function getCurrentUser() {
 export async function getSession() {
   const { data: { session }, error } = await supabase.auth.getSession();
   return { session, error };
-} 
+}
+
+export async function updateProfile(profile: { fullName?: string; company?: string; jobTitle?: string }) {
+  const { data, error } = await supabase.auth.updateUser({
+    data: {
+      fullName: profile.fullName,
+      company: profile.company,
+      jobTitle: profile.jobTitle,
+    },
+  });
+  return { data, error };
+}

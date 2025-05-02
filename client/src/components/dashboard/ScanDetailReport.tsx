@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   ArrowLeft, 
   Shield, 
@@ -24,136 +24,85 @@ import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
 import { toast } from '@/hooks/use-toast';
 
-// Mock scan data - in a real app this would come from an API or props
-const scanDetails = {
-  id: 1,
-  url: 'https://example.com',
-  scanDate: '2023-08-15',
-  completedDate: '2023-08-15',
-  status: 'completed',
-  scanDuration: '1h 23m',
-  pagesScanned: 53,
-  requestsSent: 1246,
-  vulnerabilities: {
-    total: 12,
-    high: 3,
-    medium: 4,
-    low: 5
-  }
-};
-
-// Mock vulnerability data
-const vulnerabilityData = [
-  {
-    id: 1,
-    title: 'Cross-Site Scripting (XSS)',
-    description: 'The application includes unvalidated user input in the HTML output without proper encoding, allowing attackers to inject malicious scripts.',
-    severity: 'high',
-    location: '/search?q=<script>alert("XSS")</script>',
-    evidence: '<script>alert("XSS")</script> was injected into the search parameter',
-    remediation: 'Implement context-sensitive encoding for all user-supplied data in the HTML output. Use React\'s built-in XSS protection or DOMPurify library.',
-    cweid: 79,
-    references: [
-      'https://owasp.org/www-community/attacks/xss/',
-      'https://portswigger.net/web-security/cross-site-scripting'
-    ]
-  },
-  {
-    id: 2,
-    title: 'SQL Injection',
-    description: 'The application constructs SQL statements using string concatenation with user-supplied input, allowing attackers to modify the query structure.',
-    severity: 'high',
-    location: '/products?id=1\' OR \'1\'=\'1',
-    evidence: 'The parameter "id=1\' OR \'1\'=\'1" returned different results than "id=1"',
-    remediation: 'Use parameterized queries or prepared statements for all database operations. Never directly embed user input into SQL queries.',
-    cweid: 89,
-    references: [
-      'https://owasp.org/www-community/attacks/SQL_Injection',
-      'https://portswigger.net/web-security/sql-injection'
-    ]
-  },
-  {
-    id: 3,
-    title: 'Cross-Site Request Forgery (CSRF)',
-    description: 'The application processes requests without verifying they originated from an authenticated user, allowing attackers to trick users into making unwanted actions.',
-    severity: 'medium',
-    location: '/api/user/update',
-    evidence: 'Form submission endpoint lacks CSRF token validation',
-    remediation: 'Implement CSRF tokens for all state-changing requests. Verify the token on the server side before processing the request.',
-    cweid: 352,
-    references: [
-      'https://owasp.org/www-community/attacks/csrf',
-      'https://portswigger.net/web-security/csrf'
-    ]
-  },
-  {
-    id: 4,
-    title: 'Insecure Cookie Attributes',
-    description: 'Cookies are set without secure attributes, potentially exposing sensitive data to attackers.',
-    severity: 'medium',
-    location: 'Response headers from /login',
-    evidence: 'Set-Cookie: session=abc123; Path=/',
-    remediation: 'Set the Secure, HttpOnly, and SameSite attributes on all sensitive cookies. The Secure attribute ensures cookies are only sent over HTTPS.',
-    cweid: 614,
-    references: [
-      'https://owasp.org/www-community/controls/SecureCookieAttribute',
-      'https://developer.mozilla.org/en-US/docs/Web/HTTP/Cookies'
-    ]
-  },
-  {
-    id: 5,
-    title: 'Missing Content Security Policy',
-    description: 'The application does not implement a Content Security Policy, allowing execution of potentially harmful scripts from any source.',
-    severity: 'medium',
-    location: 'Response headers from /',
-    evidence: 'No Content-Security-Policy header found in response',
-    remediation: 'Implement a Content Security Policy header that restricts script sources to trusted domains and prevents inline script execution.',
-    cweid: 693,
-    references: [
-      'https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP',
-      'https://owasp.org/www-project-secure-headers/#content-security-policy'
-    ]
-  },
-  {
-    id: 6,
-    title: 'Server Information Disclosure',
-    description: 'The server reveals detailed version information, which could help attackers identify specific vulnerabilities.',
-    severity: 'low',
-    location: 'Response headers from /',
-    evidence: 'Server: Apache/2.4.41 (Ubuntu)',
-    remediation: 'Configure the web server to remove or obscure version information from HTTP response headers.',
-    cweid: 200,
-    references: [
-      'https://owasp.org/www-project-web-security-testing-guide/latest/4-Web_Application_Security_Testing/01-Information_Gathering/02-Fingerprint_Web_Server'
-    ]
-  },
-  {
-    id: 7,
-    title: 'Insecure SOP Implementation',
-    description: 'The application\'s Same-Origin Policy implementation allows cross-origin requests that should be restricted.',
-    severity: 'low',
-    location: 'Response headers from /api/data',
-    evidence: 'Access-Control-Allow-Origin: *',
-    remediation: 'Restrict CORS headers to only allow specific trusted domains. Avoid using wildcard origins, especially for endpoints that handle sensitive data.',
-    cweid: 346,
-    references: [
-      'https://developer.mozilla.org/en-US/docs/Web/Security/Same-origin_policy',
-      'https://owasp.org/www-project-secure-headers/#access-control-allow-origin'
-    ]
-  }
-];
-
 interface ScanDetailReportProps {
-  scanId: number;
+  scanId: string; // Change type to string
   onBack: () => void;
 }
 
 const ScanDetailReport: React.FC<ScanDetailReportProps> = ({ scanId, onBack }) => {
   const [activeTab, setActiveTab] = useState('overview');
   const [expandedVulnerability, setExpandedVulnerability] = useState<number | null>(null);
-  
+  const [scanDetails, setScanDetails] = useState<any>(null);
+  const [vulnerabilityData, setVulnerabilityData] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    fetchScanDetails();
+  }, [scanId]);
+
+  const fetchScanDetails = async () => {
+    setIsLoading(true);
+    try {
+      const response = await fetch(`/api/zap/scan/${scanId}`); // Use scanId directly
+      if (!response.ok) throw new Error('Failed to fetch scan details');
+      const data = await response.json();
+
+      setScanDetails({
+        id: data.scan.id,
+        url: data.scan.targetUrl,
+        scanDate: new Date(data.scan.startTime).toLocaleDateString(),
+        completedDate: data.scan.endTime ? new Date(data.scan.endTime).toLocaleDateString() : 'Unknown',
+        status: data.scan.status,
+        scanDuration: data.scan.endTime
+          ? getTimeDuration(new Date(data.scan.startTime), new Date(data.scan.endTime))
+          : 'Unknown',
+        pagesScanned: data.scan.pagesScanned || data.scan.totalRequests || 0,
+        vulnerabilities: data.summary || {
+          total: 0,
+          high: 0,
+          medium: 0,
+          low: 0
+        }
+      });
+
+      // Transform the vulnerability data to match the expected format
+      const transformedVulnerabilities = (data.results || []).map((vuln: any, index: number) => ({
+        id: index,
+        title: vuln.name || 'Unknown Vulnerability',
+        description: vuln.description || 'No description available',
+        severity: (vuln.risk || 'low').toLowerCase(),
+        location: vuln.url || 'Unknown location',
+        evidence: vuln.evidence || 'No evidence available',
+        remediation: vuln.solution || 'No remediation available',
+        references: vuln.reference ? [vuln.reference] : []
+      }));
+
+      setVulnerabilityData(transformedVulnerabilities);
+    } catch (error) {
+      console.error('Error fetching scan details:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch scan details",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const getTimeDuration = (startDate: Date, endDate: Date): string => {
+    const durationMs = endDate.getTime() - startDate.getTime();
+    const minutes = Math.floor(durationMs / 60000);
+    const hours = Math.floor(minutes / 60);
+    const remainingMinutes = minutes % 60;
+
+    if (hours > 0) {
+      return `${hours}h ${remainingMinutes}m`;
+    }
+    return `${minutes}m`;
+  };
+
   const handleCopyLink = () => {
-    // In a real app, this would generate a shareable link
     navigator.clipboard.writeText(`https://codesafe.ai/reports/${scanId}`);
     toast({
       title: "Link copied",
@@ -162,7 +111,6 @@ const ScanDetailReport: React.FC<ScanDetailReportProps> = ({ scanId, onBack }) =
   };
   
   const handleDownloadReport = () => {
-    // In a real app, this would trigger the download of a PDF or JSON report
     toast({
       title: "Report download started",
       description: "Your report will be downloaded shortly",
@@ -178,7 +126,9 @@ const ScanDetailReport: React.FC<ScanDetailReportProps> = ({ scanId, onBack }) =
   };
   
   const getSeverityColor = (severity: string) => {
-    switch (severity) {
+    if (!severity) return 'text-gray-500 bg-gray-500/20 border-gray-500/30';
+    
+    switch (severity.toLowerCase()) {
       case 'high': return 'text-red-500 bg-red-500/20 border-red-500/30';
       case 'medium': return 'text-yellow-500 bg-yellow-500/20 border-yellow-500/30';
       case 'low': return 'text-blue-500 bg-blue-500/20 border-blue-500/30';
@@ -187,9 +137,18 @@ const ScanDetailReport: React.FC<ScanDetailReportProps> = ({ scanId, onBack }) =
   };
   
   const filterVulnerabilities = (tab: string) => {
+    if (!vulnerabilityData || vulnerabilityData.length === 0) return [];
     if (tab === 'all') return vulnerabilityData;
     return vulnerabilityData.filter(vuln => vuln.severity === tab);
   };
+
+  if (isLoading) {
+    return <div className="text-center py-8 text-gray-400">Loading scan details...</div>;
+  }
+
+  if (!scanDetails) {
+    return <div className="text-center py-8 text-gray-400">No scan details found.</div>;
+  }
 
   return (
     <div className="space-y-6">
@@ -344,9 +303,10 @@ const ScanDetailReport: React.FC<ScanDetailReportProps> = ({ scanId, onBack }) =
                     <span className="text-red-500 font-medium">{scanDetails.vulnerabilities.high}</span>
                   </div>
                   <Progress 
-                    value={(scanDetails.vulnerabilities.high / scanDetails.vulnerabilities.total) * 100} 
-                    className="h-2 bg-primary-dark"
-                    indicatorClassName="bg-red-500"
+                    value={scanDetails.vulnerabilities.total > 0 
+                      ? (scanDetails.vulnerabilities.high / scanDetails.vulnerabilities.total) * 100 
+                      : 0} 
+                    className="bg-primary-dark h-2"
                   />
                 </div>
                 
@@ -359,9 +319,10 @@ const ScanDetailReport: React.FC<ScanDetailReportProps> = ({ scanId, onBack }) =
                     <span className="text-yellow-500 font-medium">{scanDetails.vulnerabilities.medium}</span>
                   </div>
                   <Progress 
-                    value={(scanDetails.vulnerabilities.medium / scanDetails.vulnerabilities.total) * 100} 
-                    className="h-2 bg-primary-dark"
-                    indicatorClassName="bg-yellow-500"
+                    value={scanDetails.vulnerabilities.total > 0 
+                      ? (scanDetails.vulnerabilities.medium / scanDetails.vulnerabilities.total) * 100 
+                      : 0} 
+                    className="bg-primary-dark h-2"
                   />
                 </div>
                 
@@ -374,9 +335,10 @@ const ScanDetailReport: React.FC<ScanDetailReportProps> = ({ scanId, onBack }) =
                     <span className="text-blue-500 font-medium">{scanDetails.vulnerabilities.low}</span>
                   </div>
                   <Progress 
-                    value={(scanDetails.vulnerabilities.low / scanDetails.vulnerabilities.total) * 100} 
-                    className="h-2 bg-primary-dark"
-                    indicatorClassName="bg-blue-500"
+                    value={scanDetails.vulnerabilities.total > 0 
+                      ? (scanDetails.vulnerabilities.low / scanDetails.vulnerabilities.total) * 100 
+                      : 0} 
+                    className="bg-primary-dark h-2"
                   />
                 </div>
               </div>
@@ -465,7 +427,7 @@ const ScanDetailReport: React.FC<ScanDetailReportProps> = ({ scanId, onBack }) =
                         </div>
                         <div className="flex items-center">
                           <Badge className={`mr-3 ${getSeverityColor(vuln.severity)}`}>
-                            {vuln.severity.charAt(0).toUpperCase() + vuln.severity.slice(1)}
+                            {vuln.severity ? vuln.severity.charAt(0).toUpperCase() + vuln.severity.slice(1) : 'Unknown'}
                           </Badge>
                           {expandedVulnerability === vuln.id 
                             ? <ChevronUp className="h-5 w-5 text-gray-400" /> 
@@ -498,7 +460,7 @@ const ScanDetailReport: React.FC<ScanDetailReportProps> = ({ scanId, onBack }) =
                           <div>
                             <h4 className="text-sm font-medium text-gray-300">References</h4>
                             <ul className="mt-1 space-y-1">
-                              {vuln.references.map((ref, index) => (
+                              {vuln.references.map((ref: string, index: number) => (
                                 <li key={index}>
                                   <a 
                                     href={ref} 
@@ -534,4 +496,4 @@ const ScanDetailReport: React.FC<ScanDetailReportProps> = ({ scanId, onBack }) =
   );
 };
 
-export default ScanDetailReport; 
+export default ScanDetailReport;

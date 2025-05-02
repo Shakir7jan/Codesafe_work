@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { useLocation } from 'wouter';
 import { 
   Search, 
   Filter, 
@@ -41,87 +42,375 @@ import {
 import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
 import ScanDetailReport from './ScanDetailReport';
+import { ScanProgressBar } from '@/components/scan/ScanProgressBar';
+import { toast } from '@/hooks/use-toast';
+import { useScanContext } from '@/contexts/ScanContext';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import axios from 'axios';
 
-// Mock scan data
-const mockScans = [
-  {
-    id: 1,
-    url: 'https://example.com',
-    status: 'completed',
-    date: '2023-08-15',
-    vulnerabilities: {
-      total: 12,
-      high: 3,
-      medium: 4,
-      low: 5
-    },
-    lastScanDuration: '1h 23m',
-    pagesScanned: 53
-  },
-  {
-    id: 2,
-    url: 'https://dashboard.example.org',
-    status: 'active',
-    date: '2023-08-20',
-    progress: 68,
-    estimatedTimeRemaining: '32m',
-    pagesScanned: 42,
-    totalPages: 74,
-    vulnerabilitiesFound: 8
-  },
-  {
-    id: 3,
-    url: 'https://store.example.io',
-    status: 'failed',
-    date: '2023-08-14',
-    error: 'Connection timeout',
-    lastScanDuration: '43m',
-  },
-  {
-    id: 4,
-    url: 'https://blog.example.net',
-    status: 'completed',
-    date: '2023-08-10',
-    vulnerabilities: {
-      total: 5,
-      high: 0,
-      medium: 2,
-      low: 3
-    },
-    lastScanDuration: '47m',
-    pagesScanned: 31
-  },
-  {
-    id: 5,
-    url: 'https://api.example.io',
-    status: 'scheduled',
-    scheduledDate: '2023-08-25 14:30',
-    frequency: 'Weekly',
-  },
-  {
-    id: 6,
-    url: 'https://staging.example.com',
-    status: 'paused',
-    date: '2023-08-12',
-    progress: 34,
-    pagesScanned: 15,
-    totalPages: 44,
-    vulnerabilitiesFound: 3
-  },
-];
+interface Scan {
+  id: string;
+  url: string;
+  status: 'completed' | 'active' | 'failed' | 'scheduled' | 'paused';
+  date: string;
+  progress?: number;
+  vulnerabilities?: {
+    total: number;
+    high: number;
+    medium: number;
+    low: number;
+  };
+  lastScanDuration?: string;
+  pagesScanned?: number;
+  totalPages?: number;
+  vulnerabilitiesFound?: number;
+  error?: string;
+  scheduledDate?: string;
+  frequency?: string;
+  type?: 'spider' | 'active';
+  targetUrl?: string;
+}
+
+interface ScanProgress {
+  scanId: string;
+  type: 'spider' | 'active';
+  status: string;
+  progress: number;
+  targetUrl: string;
+  startTime: Date;
+}
+
+interface SubscriptionLimits {
+  maxScansPerDay: number;
+  maxScansPerMonth: number;
+  maxActiveScansConcurrent: number;
+  scanDepth: number;
+  advancedScanOptions: boolean;
+  scheduledScans: boolean;
+  scanTypes: string[];
+  reportFormats: string[];
+  zapFeatures?: string[];
+}
 
 const ScanManager: React.FC = () => {
+  const [, setLocation] = useLocation();
   const [activeTab, setActiveTab] = useState('all');
   const [showNewScanDialog, setShowNewScanDialog] = useState(false);
-  const [newScanUrl, setNewScanUrl] = useState('');
   const [advancedOptions, setAdvancedOptions] = useState(false);
-  const [selectedScanId, setSelectedScanId] = useState<number | null>(null);
+  const [newScanUrl, setNewScanUrl] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [activeScans, setActiveScans] = useState<Scan[]>([]);
+  const [scanHistory, setScanHistory] = useState<Scan[]>([]);
+  const { scanProgress } = useScanContext();
   
-  // Filter scans based on active tab
-  const filteredScans = mockScans.filter(scan => {
-    if (activeTab === 'all') return true;
-    return scan.status === activeTab;
+  const [scanConfig, setScanConfig] = useState({
+    depth: 3,
+    scope: 'quick' as 'quick' | 'full',
+    useAdvancedOptions: false,
   });
+  
+  const [subscriptionLimits, setSubscriptionLimits] = useState<SubscriptionLimits | null>(null);
+  const [isLoadingLimits, setIsLoadingLimits] = useState(false);
+  const [subscriptionTier, setSubscriptionTier] = useState<string>('free');
+  
+  const [scanError, setScanError] = useState<{title: string, message: string} | null>(null);
+
+  const [useAjaxSpider, setUseAjaxSpider] = useState(false);
+  const [apiImportUrl, setApiImportUrl] = useState('');
+  const [customPolicy, setCustomPolicy] = useState('');
+  const [contextAuth, setContextAuth] = useState('');
+  const [authType, setAuthType] = useState<'none' | 'form' | 'json'>('none');
+  const [authConfig, setAuthConfig] = useState<{ [key: string]: any }>({});
+
+  // Fetch initial data
+  useEffect(() => {
+    fetchActiveScans();
+    fetchScanHistory();
+    fetchSubscriptionLimits();
+  }, []);
+
+  // Handle dialog open - refresh subscription data when dialog opens
+  useEffect(() => {
+    if (showNewScanDialog) {
+      fetchSubscriptionLimits();
+    }
+  }, [showNewScanDialog]);
+
+  useEffect(() => {
+    const updatedActiveScans = activeScans.map(scan => {
+      const progress = scanProgress.get(scan.id);
+      if (progress) {
+        return {
+          ...scan,
+          progress: typeof progress === 'number' ? progress : 0
+        };
+      }
+      return scan;
+    });
+
+    scanProgress.forEach((progress, scanId) => {
+      if (!activeScans.find(scan => scan.id === scanId)) {
+        updatedActiveScans.push({
+          id: scanId,
+          url: 'Loading...',
+          status: 'active' as const,
+          date: new Date().toLocaleDateString(),
+          progress: typeof progress === 'number' ? progress : 0
+        });
+      }
+    });
+
+    setActiveScans(updatedActiveScans);
+  }, [scanProgress]);
+
+  const fetchSubscriptionLimits = async () => {
+    try {
+      setIsLoadingLimits(true);
+      console.log("Fetching subscription data...");
+      const { data } = await axios.get('/api/subscription');
+      console.log("Subscription data loaded:", data);
+      
+      if (data && data.limits) {
+        setSubscriptionLimits({ ...data.limits, zapFeatures: data.limits.zapFeatures || [] });
+        setSubscriptionTier(data.tier || 'free');
+        
+        // Reset options based on new limits
+        setAdvancedOptions(data.limits.advancedScanOptions);
+        
+        // Update scan depth based on new limits
+        setScanConfig(prev => ({
+          ...prev,
+          depth: Math.min(prev.depth, data.limits.scanDepth)
+        }));
+        
+        // Log the features to help debug
+        console.log("Available ZAP features:", data.limits.zapFeatures || []);
+        console.log("Advanced options enabled:", data.limits.advancedScanOptions);
+      }
+    } catch (error) {
+      console.error('Failed to fetch subscription limits:', error);
+      toast({
+        title: "Warning",
+        description: "Could not load subscription information. Some features may be limited.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoadingLimits(false);
+    }
+  };
+
+  const fetchActiveScans = async () => {
+    try {
+      const response = await fetch('/api/zap/active-scans');
+      if (!response.ok) throw new Error('Failed to fetch active scans');
+      const data = await response.json();
+      setActiveScans(data);
+    } catch (error) {
+      console.error('Error fetching active scans:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch active scans",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const fetchScanHistory = async () => {
+    try {
+      const response = await fetch('/api/zap/scan-history');
+      if (!response.ok) throw new Error('Failed to fetch scan history');
+      const data = await response.json();
+      
+      const formattedScans = data.map((scan: any) => ({
+        id: scan.id,
+        url: scan.targetUrl,
+        status: scan.status,
+        date: new Date(scan.startTime).toLocaleString(),
+        progress: scan.progress,
+        type: scan.type,
+        targetUrl: scan.targetUrl,
+        lastScanDuration: scan.endTime ? 
+          getTimeDuration(new Date(scan.startTime), new Date(scan.endTime)) : 
+          undefined,
+        vulnerabilities: scan.summary
+      }));
+      
+      setScanHistory(formattedScans);
+    } catch (error) {
+      console.error('Error fetching scan history:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch scan history",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const getTimeDuration = (startDate: Date, endDate: Date): string => {
+    const durationMs = endDate.getTime() - startDate.getTime();
+    const minutes = Math.floor(durationMs / 60000);
+    const hours = Math.floor(minutes / 60);
+    const remainingMinutes = minutes % 60;
+    
+    if (hours > 0) {
+      return `${hours}h ${remainingMinutes}m`;
+    }
+    return `${minutes}m`;
+  };
+
+  const handleStartScan = async () => {
+    setScanError(null);
+    if (!newScanUrl) {
+      setScanError({
+        title: "Error",
+        message: "Please enter a URL to scan"
+      });
+      toast({
+        title: "Error",
+        description: "Please enter a URL to scan",
+        variant: "destructive"
+      });
+      return;
+    }
+    try {
+      new URL(newScanUrl);
+    } catch (e) {
+      setScanError({
+        title: "Invalid URL",
+        message: "Please enter a valid URL (e.g., https://example.com)"
+      });
+      toast({
+        title: "Error",
+        description: "Please enter a valid URL (e.g., https://example.com)",
+        variant: "destructive"
+      });
+      return;
+    }
+    let parsedContextAuth = undefined;
+    if (authType === 'json') {
+      if (!contextAuth) {
+        setScanError({
+          title: "Missing Auth Config",
+          message: "Please provide a valid JSON authentication config."
+        });
+        toast({
+          title: "Error",
+          description: "Please provide a valid JSON authentication config.",
+          variant: "destructive"
+        });
+        return;
+      }
+      try {
+        parsedContextAuth = JSON.parse(contextAuth.replace(/'/g, '"'));
+      } catch (error) {
+        setScanError({
+          title: "Invalid JSON",
+          message: "Please enter valid JSON for authentication configuration"
+        });
+        toast({
+          title: "Error",
+          description: "Please enter valid JSON for authentication configuration",
+          variant: "destructive"
+        });
+        return;
+      }
+    }
+    setIsLoading(true);
+    try {
+      const config = {
+        depth: Math.min(scanConfig.depth, subscriptionLimits?.scanDepth || 3),
+        scope: subscriptionLimits?.advancedScanOptions ? scanConfig.scope : 'quick',
+      };
+      const body = {
+        url: newScanUrl,
+        config,
+        ajax: useAjaxSpider || undefined,
+        apiImport: apiImportUrl || undefined,
+        customPolicy: customPolicy || undefined,
+        contextAuth: parsedContextAuth // Only send if present, else undefined
+      };
+      const response = await fetch('/api/zap/spider-scan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        setScanError({
+          title: errorData.error || "Error",
+          message: errorData.message || "Failed to start scan. Please try again later."
+        });
+        toast({
+          title: errorData.error || "Error",
+          description: errorData.message || "Failed to start scan. Please try again later.",
+          variant: "destructive"
+        });
+        throw new Error(errorData.message || 'Failed to start scan');
+      }
+      const { scanId: spiderScanId } = await response.json();
+      const spiderScan: Scan = {
+        id: spiderScanId,
+        url: newScanUrl,
+        status: 'active',
+        date: new Date().toISOString(),
+        progress: 0,
+        type: 'spider',
+        targetUrl: newScanUrl
+      };
+      setActiveScans(prev => [...prev, spiderScan]);
+      setScanHistory(prev => [...prev, spiderScan]);
+      setShowNewScanDialog(false);
+      setNewScanUrl('');
+      toast({
+        title: "Success",
+        description: "Spider scan started successfully",
+      });
+    } catch (error) {
+      console.error('Error starting scan:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleScanComplete = (scanId: string) => {
+    setActiveScans(prev => {
+      const scan = prev.find(s => s.id === scanId);
+      if (!scan) return prev;
+
+      if (scan.type === 'spider') {
+        return prev.map(s => 
+          s.id === scanId 
+            ? { ...s, progress: 100 }
+            : s
+        );
+      }
+
+      if (scan.type === 'active') {
+        return prev.filter(s => s.id !== scanId);
+      }
+
+      return prev;
+    });
+
+    fetchScanHistory();
+
+    toast({
+      title: "Scan Progress",
+      description: "The scan phase has completed successfully",
+    });
+  };
+
+  const handleCloseScan = (scanId: string) => {
+    setActiveScans(prev => {
+      const scan = prev.find(s => s.id === scanId);
+      if (!scan) return prev;
+
+      if (scan.progress === 100) {
+        return prev.filter(s => s.id !== scanId);
+      }
+      return prev;
+    });
+  };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -140,401 +429,385 @@ const ScanManager: React.FC = () => {
     }
   };
 
-  const handleViewReport = (scanId: number) => {
-    setSelectedScanId(scanId);
+  const handleViewReport = (scanId: string) => {
+    if (!scanId || typeof scanId !== 'string' || scanId.trim() === '') {
+      toast({
+        title: "Error",
+        description: "Invalid scan ID. Please try again.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setLocation(`/scans/${scanId.trim()}`);
   };
 
-  const handleBackToList = () => {
-    setSelectedScanId(null);
-  };
+  const filteredScans = scanHistory.filter(scan => {
+    if (activeTab === 'all') return true;
+    return scan.status === activeTab;
+  });
 
-  // If a specific scan is selected, show its detail report
-  if (selectedScanId !== null) {
-    return <ScanDetailReport scanId={selectedScanId} onBack={handleBackToList} />;
-  }
+  // Function to handle subscription plan change (for testing)
+  const handlePlanChange = async (newPlan: string) => {
+    try {
+      setIsLoading(true);
+      const response = await axios.post('/api/subscription/update', {
+        tier: newPlan
+      });
+      
+      console.log("Plan update response:", response.data);
+      
+      toast({
+        title: "Success",
+        description: `Your plan has been updated to ${newPlan}`,
+      });
+      
+      // Immediately refresh subscription data
+      await fetchSubscriptionLimits();
+      
+    } catch (error) {
+      console.error("Error updating plan:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update your subscription plan",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
-    <div className="space-y-6">
-      {/* Page Header */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold">Scan Manager</h1>
-          <p className="text-gray-400">Start, monitor, and manage your web security scans</p>
-        </div>
-        <Dialog open={showNewScanDialog} onOpenChange={setShowNewScanDialog}>
-          <DialogTrigger asChild>
-            <Button className="bg-accent-blue hover:bg-accent-blue/90 text-white">
-              <Search className="mr-2 h-4 w-4" />
-              New Scan
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="bg-primary-medium border-accent-blue/20 text-gray-100 sm:max-w-[500px]">
-            <DialogHeader>
-              <DialogTitle className="text-xl">Start New Security Scan</DialogTitle>
-              <DialogDescription className="text-gray-400">
-                Enter the URL you want to scan for vulnerabilities
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <label htmlFor="scan-url" className="text-sm font-medium text-gray-300">
-                  Website URL
-                </label>
-                <Input 
-                  id="scan-url"
-                  placeholder="https://yourdomain.com"
-                  className="bg-primary-dark border-accent-blue/30 text-gray-100"
-                  value={newScanUrl}
-                  onChange={(e) => setNewScanUrl(e.target.value)}
-                />
-                <p className="text-xs text-gray-400">
-                  Make sure you have permission to scan this website.
-                </p>
-              </div>
-              
-              <div className="pt-2">
-                <button 
-                  onClick={() => setAdvancedOptions(!advancedOptions)}
-                  className="flex items-center text-sm text-accent-blue hover:text-accent-blue/80"
-                >
-                  <ChevronDown className={`h-4 w-4 mr-1 transition-transform ${advancedOptions ? 'rotate-180' : ''}`} />
-                  Advanced Options
-                </button>
-                
-                {advancedOptions && (
-                  <div className="space-y-3 mt-3 pl-2 border-l-2 border-accent-blue/20">
-                    <div className="flex items-center space-x-2">
-                      <Checkbox id="crawl-depth" />
-                      <label htmlFor="crawl-depth" className="text-sm text-gray-300">
-                        Limit crawl depth
-                      </label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Checkbox id="login-required" />
-                      <label htmlFor="login-required" className="text-sm text-gray-300">
-                        Authentication required
-                      </label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Checkbox id="passive-only" />
-                      <label htmlFor="passive-only" className="text-sm text-gray-300">
-                        Passive scan only (non-intrusive)
-                      </label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Checkbox id="browser-scan" />
-                      <label htmlFor="browser-scan" className="text-sm text-gray-300">
-                        Include browser-based scanning (for SPAs)
-                      </label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Checkbox id="schedule-scan" />
-                      <label htmlFor="schedule-scan" className="text-sm text-gray-300">
-                        Schedule recurring scan
-                      </label>
-                    </div>
+    <>
+      <div className="space-y-6">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div>
+            <h1 className="text-2xl md:text-3xl font-bold">Scan Manager</h1>
+            <p className="text-gray-400">Start, monitor, and manage your web security scans</p>
+          </div>
+          <div className="flex gap-2">
+            <Dialog open={showNewScanDialog} onOpenChange={setShowNewScanDialog}>
+              <DialogTrigger asChild>
+                <Button className="bg-accent-blue hover:bg-accent-blue/90 text-white">
+                  <Search className="mr-2 h-4 w-4" />
+                  New Scan
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="bg-primary-medium border-accent-blue/20 text-gray-100 sm:max-w-[500px]">
+                <DialogHeader>
+                  <DialogTitle className="text-xl">Start New Security Scan</DialogTitle>
+                  <DialogDescription className="text-gray-400">
+                    Enter the URL you want to scan for vulnerabilities
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                    {scanError && (
+                      <div className="p-3 bg-red-900/20 border border-red-500/30 rounded-md text-red-400 mb-2">
+                        <div className="font-semibold flex items-center mb-1">
+                          <AlertTriangle className="h-4 w-4 mr-1" />
+                          {scanError.title}
+                        </div>
+                        <p className="text-sm">{scanError.message}</p>
+                      </div>
+                    )}
+                  
+                  <div className="space-y-2">
+                    <label htmlFor="scan-url" className="text-sm font-medium text-gray-300">
+                      Website URL
+                    </label>
+                    <Input 
+                      id="scan-url"
+                      placeholder="https://yourdomain.com"
+                      className="bg-white/10 border-accent-blue/20 text-white placeholder:text-gray-400"
+                      value={newScanUrl}
+                      onChange={(e) => setNewScanUrl(e.target.value)}
+                    />
+                    <p className="text-xs text-gray-400">
+                      Make sure you have permission to scan this website.
+                    </p>
                   </div>
-                )}
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setShowNewScanDialog(false)} className="border-gray-600 text-gray-300">
-                Cancel
-              </Button>
-              <Button className="bg-accent-blue hover:bg-accent-blue/90 text-white">
-                Start Scan
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+                    
+                    <div className="space-y-2 pt-2">
+                      <label htmlFor="scan-depth" className="text-sm font-medium text-gray-300">
+                        Scan Depth (1-{subscriptionLimits?.scanDepth || 3})
+                      </label>
+                      <Select 
+                        value={scanConfig.depth.toString()} 
+                        onValueChange={(value) => setScanConfig({...scanConfig, depth: parseInt(value)})}>
+                        <SelectTrigger className="bg-white/10 border-accent-blue/20 text-white">
+                          <SelectValue placeholder="Select scan depth" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-primary-medium border-accent-blue/20 text-white">
+                          {Array.from({length: subscriptionLimits?.scanDepth || 3}, (_, i) => i + 1).map(depth => (
+                            <SelectItem key={depth} value={depth.toString()}>{depth}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-gray-400">Higher values scan deeper but take longer</p>
+                  </div>
+                  
+                  <div className="pt-2">
+                    <button 
+                      onClick={() => setAdvancedOptions(!advancedOptions)}
+                      className="flex items-center text-sm text-accent-blue hover:text-accent-blue/80"
+                        disabled={!subscriptionLimits?.advancedScanOptions}
+                    >
+                      <ChevronDown className={`h-4 w-4 mr-1 transition-transform ${advancedOptions ? 'rotate-180' : ''}`} />
+                        Advanced Options {!subscriptionLimits?.advancedScanOptions && '(Upgrade Required)'}
+                    </button>
+                    
+                      {advancedOptions && subscriptionLimits?.advancedScanOptions && (
+                      <div className="space-y-3 mt-3 pl-2 border-l-2 border-accent-blue/20">
+                          {subscriptionLimits?.zapFeatures?.includes('ajaxSpider') && (
+                        <div className="flex items-center space-x-2">
+                              <Checkbox 
+                                id="ajax-spider" 
+                                checked={useAjaxSpider} 
+                                onCheckedChange={(checked) => setUseAjaxSpider(!!checked)}
+                              />
+                              <label htmlFor="ajax-spider" className="text-sm text-gray-300">
+                                Use AJAX Spider (for JS-heavy apps)
+                          </label>
+                        </div>
+                          )}
+                          {subscriptionLimits?.zapFeatures?.some(f => ['apiImport','swaggerImport','graphqlImport'].includes(f)) && (
+                            <div className="space-y-1">
+                              <label htmlFor="api-import-url" className="text-sm text-gray-300">
+                                Import API Definition (OpenAPI/Swagger/GraphQL URL)
+                          </label>
+                              <Input
+                                id="api-import-url"
+                                placeholder="https://yourdomain.com/openapi.json"
+                                className="bg-white/10 border-accent-blue/20 text-white placeholder:text-gray-400"
+                                value={apiImportUrl}
+                                onChange={e => setApiImportUrl(e.target.value)}
+                              />
+                              <p className="text-xs text-gray-400">Enterprise only: Import API definitions for API security testing</p>
+                        </div>
+                          )}
+                          {subscriptionLimits?.zapFeatures?.includes('customScanPolicy') && (
+                            <div className="space-y-1">
+                              <label htmlFor="custom-policy" className="text-sm text-gray-300">
+                                Custom Scan Policy (JSON or Policy Name)
+                          </label>
+                              <Input
+                                id="custom-policy"
+                                placeholder="e.g. MyPolicy or JSON config"
+                                className="bg-white/10 border-accent-blue/20 text-white placeholder:text-gray-400"
+                                value={customPolicy}
+                                onChange={e => setCustomPolicy(e.target.value)}
+                              />
+                              <p className="text-xs text-gray-400">Pro/Enterprise: Fine-tune which rules are used in the scan</p>
+                            </div>
+                          )}
+                          {subscriptionLimits?.zapFeatures?.includes('contextAuth') && (
+                            <div className="space-y-1">
+                              <label htmlFor="auth-type" className="text-sm text-gray-300">
+                                Authentication Type
+                              </label>
+                              <Select
+                                value={authType}
+                                onValueChange={(value) => setAuthType(value as 'none' | 'form' | 'json')}
+                              >
+                                <SelectTrigger className="bg-white/10 border-accent-blue/20 text-white">
+                                  <SelectValue placeholder="Select authentication type" />
+                                </SelectTrigger>
+                                <SelectContent className="bg-primary-medium border-accent-blue/20 text-white">
+                                  <SelectItem value="none">None</SelectItem>
+                                  <SelectItem value="form">Form-based</SelectItem>
+                                  <SelectItem value="json">JSON-based</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              {authType === 'json' && (
+                                <div className="space-y-1 mt-2">
+                                  <label htmlFor="context-auth" className="text-sm text-gray-300 flex items-center">
+                                    Context/Auth Config (JSON)
+                                    <div className="ml-1 relative group">
+                                      <span className="cursor-help text-gray-400">ⓘ</span>
+                                      <div className="absolute bottom-full left-0 mb-2 w-96 p-2 bg-gray-800 rounded-md text-xs shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity z-50">
+                                        <p className="font-medium mb-1">Auth Config Format Examples:</p>
+                                        <p className="mb-1"><strong>OWASP Juice Shop:</strong></p>
+                                        <pre className="bg-gray-900 p-1 rounded text-xs overflow-auto">
+{`{
+  "authType": "form",
+  "loginUrl": "http://localhost:3000/rest/user/login",
+  "loginRequestData": {"email":"admin@juice-sh.op","password":"admin123"},
+  "loginPageValidationRegex": "\\\\{\\\"authentication\\\":\\\\{\\\"token\\\":\\\"(.*?)\\\"",
+  "credentials": {
+    "username": "admin@juice-sh.op",
+    "password": "admin123"
+  },
+  "headers": {
+    "Content-Type": "application/json"
+  }
+}`}
+                                        </pre>
+                                      </div>
+                                    </div>
+                                  </label>
+                                  <Input
+                                    id="context-auth"
+                                    placeholder='{"authType":"form","loginUrl":"http://localhost:3000/rest/user/login"...}'
+                                    className="bg-white/10 border-accent-blue/20 text-white placeholder:text-gray-500 font-mono text-xs"
+                                    value={contextAuth}
+                                    onChange={e => setContextAuth(e.target.value)}
+                                  />
+                                  <p className="text-xs text-gray-400">Enterprise: Authenticated/context-aware scans</p>
+                                  {contextAuth.includes("'") && (
+                                    <p className="text-amber-400 text-xs">Note: Use double quotes (") instead of single quotes (') for valid JSON</p>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      
+                      {subscriptionLimits && (
+                        <div className="mt-4 p-3 bg-accent-blue/10 rounded-md border border-accent-blue/20">
+                          <p className="text-xs text-accent-blue mb-1 font-medium">Your Plan Limits ({subscriptionTier}):</p>
+                          <ul className="text-xs text-gray-400 space-y-1">
+                            <li>• {subscriptionLimits.maxScansPerDay} scans per day</li>
+                            <li>• {subscriptionLimits.maxScansPerMonth} scans per month</li>
+                            <li>• {subscriptionLimits.maxActiveScansConcurrent} concurrent scans</li>
+                            <li>• Max scan depth: {subscriptionLimits.scanDepth}</li>
+                            <li>• Advanced options: {subscriptionLimits.advancedScanOptions ? 'Yes' : 'No'}</li>
+                          </ul>
+                          <Button
+                            variant="link"
+                            size="sm"
+                            className="text-accent-blue p-0 mt-1 h-auto text-xs"
+                            onClick={() => fetchSubscriptionLimits()}
+                          >
+                            <RefreshCw className="h-3 w-3 mr-1" />
+                            Refresh Plan Data
+                          </Button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setShowNewScanDialog(false)} className="border-gray-600 text-gray-300">
+                    Cancel
+                  </Button>
+                  <Button 
+                    className="bg-accent-blue hover:bg-accent-blue/90 text-white"
+                    onClick={handleStartScan}
+                    disabled={isLoading}
+                  >
+                      {isLoading ? (
+                        <>
+                          <span className="animate-spin mr-2">⟳</span>
+                          Starting Scan...
+                        </>
+                      ) : (
+                        <>Start Scan</>
+                      )}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+            
+            {/* Plan Switcher for Testing (this would normally be in Settings) */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="border-gray-600 text-gray-300">
+                  Test Plans
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="bg-primary-medium border-accent-blue/20 text-white">
+                <DropdownMenuItem onClick={() => handlePlanChange('free')}>
+                  Switch to Free Plan
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handlePlanChange('basic')}>
+                  Switch to Basic Plan
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handlePlanChange('professional')}>
+                  Switch to Professional Plan
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handlePlanChange('enterprise')}>
+                  Switch to Enterprise Plan
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </div>
       </div>
-
-      {/* Stats Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="bg-primary-medium/30 border-accent-blue/20">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-400">Total Scans</p>
-                <h2 className="text-2xl font-bold">{mockScans.length}</h2>
-              </div>
-              <div className="h-10 w-10 rounded-full bg-accent-blue/20 flex items-center justify-center">
-                <Search className="h-5 w-5 text-accent-blue" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card className="bg-primary-medium/30 border-accent-blue/20">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-400">Active Scans</p>
-                <h2 className="text-2xl font-bold">{mockScans.filter(scan => scan.status === 'active').length}</h2>
-              </div>
-              <div className="h-10 w-10 rounded-full bg-blue-500/20 flex items-center justify-center">
-                <RefreshCw className="h-5 w-5 text-blue-500" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card className="bg-primary-medium/30 border-accent-blue/20">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-400">Vulnerabilities Found</p>
-                <h2 className="text-2xl font-bold">
-                  {mockScans
-                    .filter(scan => scan.status === 'completed')
-                    .reduce((total, scan) => total + (scan.vulnerabilities?.total || 0), 0)}
-                </h2>
-              </div>
-              <div className="h-10 w-10 rounded-full bg-red-500/20 flex items-center justify-center">
-                <ShieldAlert className="h-5 w-5 text-red-500" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card className="bg-primary-medium/30 border-accent-blue/20">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-400">Scheduled Scans</p>
-                <h2 className="text-2xl font-bold">{mockScans.filter(scan => scan.status === 'scheduled').length}</h2>
-              </div>
-              <div className="h-10 w-10 rounded-full bg-purple-500/20 flex items-center justify-center">
-                <Calendar className="h-5 w-5 text-purple-500" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Search and Filter */}
-      <Card className="bg-primary-medium/30 border-accent-blue/20">
-        <CardContent className="p-4 flex flex-col md:flex-row gap-3">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <Input 
-              placeholder="Search scans..." 
-              className="pl-9 bg-primary-dark border-accent-blue/30 text-gray-100"
+      <div className="space-y-4">
+        <h2 className="text-lg font-semibold">Active Scans</h2>
+        {activeScans.length > 0 ? (
+          activeScans.map((scan) => (
+          <div key={scan.id} className="space-y-4">
+            <ScanProgressBar
+              scanId={scan.id}
+              initialProgress={scanProgress.get(scan.id)}
+              onComplete={() => handleScanComplete(scan.id)}
+              onClose={() => handleCloseScan(scan.id)}
             />
           </div>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="border-accent-blue/30 text-gray-300 min-w-[120px]">
-                <Filter className="mr-2 h-4 w-4" />
-                Filter
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent className="bg-primary-medium border-accent-blue/30 text-gray-100">
-              <DropdownMenuItem className="hover:bg-primary-dark/50">Date (Newest)</DropdownMenuItem>
-              <DropdownMenuItem className="hover:bg-primary-dark/50">Date (Oldest)</DropdownMenuItem>
-              <DropdownMenuItem className="hover:bg-primary-dark/50">Vulnerabilities (High to Low)</DropdownMenuItem>
-              <DropdownMenuItem className="hover:bg-primary-dark/50">Vulnerabilities (Low to High)</DropdownMenuItem>
-              <DropdownMenuItem className="hover:bg-primary-dark/50">Alphabetical (A-Z)</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </CardContent>
-      </Card>
+          ))
+        ) : (
+          <div className="p-6 text-center text-gray-400 border border-dashed border-gray-600 rounded-lg">
+            <ShieldAlert className="h-10 w-10 mx-auto mb-3 text-gray-500" />
+            <p>No active scans. Start a new scan to detect vulnerabilities.</p>
+          </div>
+        )}
+      </div>
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-gray-300">Scan History</h2>
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-[400px]">
+            <TabsList className="grid w-full grid-cols-5">
+              <TabsTrigger value="all">All</TabsTrigger>
+              <TabsTrigger value="completed">Completed</TabsTrigger>
+              <TabsTrigger value="active">Active</TabsTrigger>
+              <TabsTrigger value="failed">Failed</TabsTrigger>
+              <TabsTrigger value="scheduled">Scheduled</TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
 
-      {/* Scan Tabs and List */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="bg-primary-medium/30 border border-accent-blue/20 p-1">
-          <TabsTrigger 
-            value="all" 
-            className="data-[state=active]:bg-accent-blue/20 data-[state=active]:text-accent-blue"
-          >
-            All Scans
-          </TabsTrigger>
-          <TabsTrigger 
-            value="active" 
-            className="data-[state=active]:bg-accent-blue/20 data-[state=active]:text-accent-blue"
-          >
-            Active
-          </TabsTrigger>
-          <TabsTrigger 
-            value="completed" 
-            className="data-[state=active]:bg-accent-blue/20 data-[state=active]:text-accent-blue"
-          >
-            Completed
-          </TabsTrigger>
-          <TabsTrigger 
-            value="failed" 
-            className="data-[state=active]:bg-accent-blue/20 data-[state=active]:text-accent-blue"
-          >
-            Failed
-          </TabsTrigger>
-          <TabsTrigger 
-            value="scheduled" 
-            className="data-[state=active]:bg-accent-blue/20 data-[state=active]:text-accent-blue"
-          >
-            Scheduled
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value={activeTab} className="space-y-4">
-          {filteredScans.map((scan) => (
-            <Card 
-              key={scan.id}
-              className="bg-primary-medium/30 border-accent-blue/20 hover:border-accent-blue/40 transition-all hover:shadow-md"
-            >
-              <CardContent className="p-5">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
-                      <h3 className="text-lg font-medium">{scan.url}</h3>
-                      {getStatusBadge(scan.status)}
+        <div className="grid gap-4">
+          {filteredScans.length > 0 ? (
+            filteredScans.map(scan => (
+            <Card key={scan.id} className="bg-primary-medium/50 border-accent-blue/20">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-4">
+                    <div className="p-2 bg-accent-blue/20 rounded-lg">
+                      <ShieldAlert className="h-5 w-5 text-accent-blue" />
                     </div>
-                    
-                    {/* Scan metadata - different based on status */}
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-x-4 gap-y-2 text-sm">
-                      <div className="flex items-center text-gray-400">
-                        <Calendar className="h-4 w-4 mr-1" />
-                        <span>{scan.date || scan.scheduledDate}</span>
-                      </div>
-                      
-                      {scan.status === 'completed' && (
-                        <>
-                          <div className="flex items-center text-gray-400">
-                            <Clock className="h-4 w-4 mr-1" />
-                            <span>Duration: {scan.lastScanDuration}</span>
-                          </div>
-                          <div className="flex items-center text-gray-400">
-                            <AlertTriangle className="h-4 w-4 mr-1" />
-                            <span>Issues: {scan.vulnerabilities?.total || 0}</span>
-                          </div>
-                        </>
-                      )}
-                      
-                      {scan.status === 'active' && (
-                        <>
-                          <div className="flex items-center text-gray-400">
-                            <Clock className="h-4 w-4 mr-1" />
-                            <span>Remaining: {scan.estimatedTimeRemaining}</span>
-                          </div>
-                          {scan.vulnerabilitiesFound !== undefined && (
-                            <div className="flex items-center text-gray-400">
-                              <AlertTriangle className="h-4 w-4 mr-1" />
-                              <span>Found: {scan.vulnerabilitiesFound}</span>
-                            </div>
-                          )}
-                        </>
-                      )}
-                      
-                      {scan.status === 'failed' && (
-                        <div className="flex items-center text-red-400 col-span-2">
-                          <XCircle className="h-4 w-4 mr-1" />
-                          <span>Error: {scan.error}</span>
-                        </div>
-                      )}
-                      
-                      {scan.status === 'scheduled' && (
-                        <div className="flex items-center text-gray-400">
-                          <Clock className="h-4 w-4 mr-1" />
-                          <span>Frequency: {scan.frequency}</span>
-                        </div>
-                      )}
-                      
-                      {scan.status === 'paused' && (
-                        <>
-                          <div className="flex items-center text-gray-400">
-                            <PauseCircle className="h-4 w-4 mr-1" />
-                            <span>Paused at {scan.progress}%</span>
-                          </div>
-                          {scan.vulnerabilitiesFound !== undefined && (
-                            <div className="flex items-center text-gray-400">
-                              <AlertTriangle className="h-4 w-4 mr-1" />
-                              <span>Found: {scan.vulnerabilitiesFound}</span>
-                            </div>
-                          )}
-                        </>
-                      )}
+                    <div>
+                      <h3 className="font-medium text-gray-200">{scan.url}</h3>
+                      <p className="text-sm text-gray-400">
+                        {scan.date} • {scan.lastScanDuration || 'In progress'}
+                      </p>
                     </div>
                   </div>
-                  
-                  {/* Progress bar for active and paused scans */}
-                  {(scan.status === 'active' || scan.status === 'paused') && (
-                    <div className="w-full md:w-64">
-                      <div className="flex justify-between text-xs text-gray-400 mb-1">
-                        <span>Progress: {scan.progress}%</span>
-                        <span>{scan.pagesScanned} / {scan.totalPages} pages</span>
-                      </div>
-                      <Progress 
-                        value={scan.progress} 
-                        className="h-2 bg-primary-dark"
-                        indicatorClassName={`${scan.status === 'active' ? 'bg-blue-500' : 'bg-yellow-500'}`}
-                      />
-                    </div>
-                  )}
-                  
-                  {/* Vulnerability summary for completed scans */}
-                  {scan.status === 'completed' && scan.vulnerabilities && (
-                    <div className="flex space-x-3">
-                      <div className="flex flex-col items-center px-3 py-1 bg-primary-dark/40 rounded-md">
-                        <span className="text-xs text-gray-400">High</span>
-                        <span className="text-lg font-bold text-red-500">{scan.vulnerabilities.high}</span>
-                      </div>
-                      <div className="flex flex-col items-center px-3 py-1 bg-primary-dark/40 rounded-md">
-                        <span className="text-xs text-gray-400">Medium</span>
-                        <span className="text-lg font-bold text-yellow-500">{scan.vulnerabilities.medium}</span>
-                      </div>
-                      <div className="flex flex-col items-center px-3 py-1 bg-primary-dark/40 rounded-md">
-                        <span className="text-xs text-gray-400">Low</span>
-                        <span className="text-lg font-bold text-blue-500">{scan.vulnerabilities.low}</span>
-                      </div>
-                    </div>
-                  )}
-                  
-                  {/* Action buttons */}
-                  <div className="flex gap-2 flex-wrap">
-                    {scan.status === 'completed' && (
-                      <Button 
-                        className="bg-accent-blue hover:bg-accent-blue/90 text-white"
-                        onClick={() => handleViewReport(scan.id)}
-                      >
-                        <BarChart3 className="mr-2 h-4 w-4" />
-                        View Report
-                      </Button>
-                    )}
-                    
-                    {scan.status === 'active' && (
-                      <Button variant="outline" className="border-yellow-500/30 text-yellow-500 hover:bg-yellow-500/10">
-                        <PauseCircle className="mr-2 h-4 w-4" />
-                        Pause
-                      </Button>
-                    )}
-                    
-                    {scan.status === 'paused' && (
-                      <Button variant="outline" className="border-blue-500/30 text-blue-500 hover:bg-blue-500/10">
-                        <Play className="mr-2 h-4 w-4" />
-                        Resume
-                      </Button>
-                    )}
-                    
-                    {(scan.status === 'failed' || scan.status === 'scheduled') && (
-                      <Button variant="outline" className="border-accent-blue/30 text-accent-blue hover:bg-accent-blue/10">
-                        <Play className="mr-2 h-4 w-4" />
-                        Start Scan
-                      </Button>
-                    )}
-                    
-                    {scan.status !== 'active' && (
-                      <Button variant="outline" className="border-red-500/30 text-red-500 hover:bg-red-500/10">
-                        <Trash className="mr-2 h-4 w-4" />
-                        Delete
-                      </Button>
-                    )}
+                  <div className="flex items-center space-x-4">
+                    {getStatusBadge(scan.status)}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleViewReport(scan.id)}
+                      className="text-gray-400 hover:text-white"
+                    >
+                      View Report
+                    </Button>
                   </div>
                 </div>
               </CardContent>
             </Card>
-          ))}
-        </TabsContent>
-      </Tabs>
-    </div>
+            ))
+          ) : (
+            <div className="p-6 text-center text-gray-400 border border-dashed border-gray-600 rounded-lg">
+              <BarChart3 className="h-10 w-10 mx-auto mb-3 text-gray-500" />
+              <p>No scan history found. Start a new scan to see results here.</p>
+            </div>
+          )}
+        </div>
+      </div>
+    </>
   );
 };
 

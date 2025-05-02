@@ -21,7 +21,11 @@ export default function Login() {
       if (error) {
         setError(error.message);
       } else {
-        setLocation('/dashboard');
+        // Get the redirect URL from the query parameters
+        const params = new URLSearchParams(window.location.search);
+        const redirectTo = params.get('redirect') || '/dashboard';
+        // Redirect to the decoded URL path without encoding it again
+        setLocation(decodeURIComponent(redirectTo));
       }
     } catch (err) {
       setError('An unexpected error occurred. Please try again.');
@@ -61,4 +65,4 @@ export default function Login() {
       </div>
     </div>
   );
-} 
+}
