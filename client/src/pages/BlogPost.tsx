@@ -640,12 +640,20 @@ const BlogPost: React.FC = () => {
                 <Button 
                   variant="outline" 
                   className="border-accent-blue/50 hover:border-accent-blue text-accent-blue hover:bg-accent-blue/10 hover:text-accent-blue-light transition-all blue-glow-border"
+                  onClick={() => {
+                    const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(`${post.title} - ${post.excerpt}`)}&url=${encodeURIComponent(`https://securescanai.com/blog/${post.id}`)}&via=SecureScanAI`;
+                    window.open(twitterUrl, '_blank', 'noopener,noreferrer');
+                  }}
                 >
                   Share on Twitter
                 </Button>
                 <Button 
                   variant="outline" 
                   className="border-accent-blue/50 hover:border-accent-blue text-accent-blue hover:bg-accent-blue/10 hover:text-accent-blue-light transition-all blue-glow-border"
+                  onClick={() => {
+                    const linkedInUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(`https://securescanai.com/blog/${post.id}`)}&title=${encodeURIComponent(post.title)}&summary=${encodeURIComponent(post.excerpt)}`;
+                    window.open(linkedInUrl, '_blank', 'noopener,noreferrer');
+                  }}
                 >
                   Share on LinkedIn
                 </Button>

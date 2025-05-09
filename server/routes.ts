@@ -1,13 +1,17 @@
 import express from "express";
 import { Request, Response } from "express";
 import bodyParser from "body-parser";
+import axios from "axios";
+import * as cheerio from "cheerio";
+import { AuthConfig } from "../shared/schema";
 import {
   startSpiderScan,
   startActiveScan,
   createScanSSEHandler,
   getAllActiveScans,
   getScanProgress,
-  getScanDetails
+  getScanDetails,
+  generateZapReport
 } from "./zapClient";
 import { storage } from "./storage";
 import { SubscriptionTier, tierLimitsConfig, getTierFeatures } from "./subscriptionTiers";
@@ -337,40 +341,101 @@ router.get("/zap/scan/:scanId/report/:format", async (req: Request, res: Respons
     const userId = DEFAULT_USER_ID;
     
     if (!['html', 'json', 'xml', 'pdf'].includes(format)) {
-      return res.status(400).json({ message: "Invalid format. Supported formats: html, json, xml, pdf" });
+      return res.status(400).json({ 
+        message: "Invalid format. Supported formats: html, json, xml, pdf",
+        error: "INVALID_FORMAT" 
+      });
+    }
+    
+    // Get the scan to check its status
+    const scan = await storage.getScan(scanId);
+    if (!scan) {
+      return res.status(404).json({ 
+        message: `Scan with ID ${scanId} not found`,
+        error: "SCAN_NOT_FOUND"
+      });
+    }
+    
+    // Check if scan is completed
+    if (scan.status !== 'completed') {
+      return res.status(400).json({
+        message: `Cannot generate report: scan is not completed (status: ${scan.status})`,
+        error: "SCAN_NOT_COMPLETED",
+        scanStatus: scan.status,
+        scanProgress: scan.progress
+      });
     }
     
     // Check if the format is allowed for user's subscription tier
     const subscription = await storage.getUserSubscription(userId);
     
     if (!subscription) {
-      return res.status(403).json({ message: "No active subscription found" });
+      return res.status(403).json({ 
+        message: "No active subscription found",
+        error: "NO_SUBSCRIPTION"
+      });
     }
     
     const tierLimits = tierLimitsConfig[subscription.tier];
     
+    // If the requested format is not allowed for this tier, determine fallback format
+    let formatToUse = format as 'html' | 'json' | 'xml' | 'pdf';
+    let formatDowngraded = false;
+    
     if (!tierLimits.reportFormats.includes(format as any)) {
-      return res.status(403).json({ 
-        message: `${format.toUpperCase()} reports are not available on your ${subscription.tier} plan`,
-        allowedFormats: tierLimits.reportFormats
-      });
+      console.log(`Format ${format} not available for ${subscription.tier} tier. Finding fallback.`);
+      formatDowngraded = true;
+      
+      // Find the best available format (prioritize HTML > JSON > XML)
+      if (tierLimits.reportFormats.includes('html')) {
+        formatToUse = 'html';
+      } else if (tierLimits.reportFormats.includes('json')) {
+        formatToUse = 'json';
+      } else if (tierLimits.reportFormats.includes('xml')) {
+        formatToUse = 'xml';
+      }
+      
+      console.log(`Falling back to ${formatToUse} format`);
     }
     
-    const reportContent = await storage.generateScanReport(scanId, format as 'html' | 'json' | 'xml');
+    // Generate the report using the ZAP API
+    console.log(`Generating ${formatToUse} report for scan ${scanId}...`);
     
-    const contentTypes = {
-      html: 'text/html',
-      json: 'application/json',
-      xml: 'application/xml',
-      pdf: 'application/pdf'
-    };
-    
-    res.setHeader('Content-Type', contentTypes[format as keyof typeof contentTypes]);
-    res.setHeader('Content-Disposition', `attachment; filename=scan-report-${scanId}.${format}`);
-    res.status(200).send(reportContent);
-  } catch (error) {
+    try {
+      const { content, contentType } = await generateZapReport(scanId, formatToUse);
+      
+      // If format was downgraded, inform the user via an additional header
+      if (formatDowngraded) {
+        res.setHeader('X-Format-Downgraded', `Requested ${format}, downgraded to ${formatToUse} based on subscription tier`);
+      }
+      
+      // Set appropriate headers based on content type
+      res.setHeader('Content-Type', contentType);
+      res.setHeader('Content-Disposition', `attachment; filename=scan-report-${scanId}.${formatToUse}`);
+      
+      // If content is base64 encoded (PDF), decode it before sending
+      if (formatToUse === 'pdf') {
+        const buffer = Buffer.from(content, 'base64');
+        res.status(200).send(buffer);
+      } else {
+        res.status(200).send(content);
+      }
+    } catch (reportError: any) {
+      console.error("Error in report generation:", reportError);
+      // Return more specific error message to client
+      return res.status(500).json({
+        message: "Failed to generate report",
+        error: "REPORT_GENERATION_FAILED",
+        details: reportError.message || "Unknown error during report generation"
+      });
+    }
+  } catch (error: any) {
     console.error("Failed to generate report:", error);
-    res.status(500).json({ message: "Failed to generate report" });
+    res.status(500).json({ 
+      message: "Failed to generate report",
+      error: "INTERNAL_SERVER_ERROR",
+      details: error.message || "Unknown error"
+    });
   }
 });
 
@@ -504,6 +569,47 @@ router.post('/subscription/update', async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Failed to update subscription:', error);
     res.status(500).json({ message: 'Failed to update subscription' });
+  }
+});
+
+/**
+ * Auto-detect login form fields
+ */
+router.post("/api/zap/detect-login-form", async (req, res) => {
+  const { loginUrl } = req.body;
+  try {
+    const { data: html } = await axios.get(loginUrl);
+    const $ = cheerio.load(html);
+    const form = $("form").first();
+    const usernameField = form.find("input[type='text'],input[type='email']").attr("name");
+    const passwordField = form.find("input[type='password']").attr("name");
+    res.json({ usernameField, passwordField, confidence: !!(usernameField && passwordField) });
+  } catch (e) {
+    res.status(500).json({ error: "Could not detect form fields" });
+  }
+});
+
+/**
+ * Session replay capture
+ */
+router.post("/api/zap/session-capture", async (req, res) => {
+  const { cookies, headers } = req.body;
+  // TODO: Store securely, associate with user/session
+  // For now, just echo back for testing
+  res.json({ success: true, cookies, headers });
+});
+
+/**
+ * Test authentication config
+ */
+router.post("/api/zap/test-auth", async (req, res) => {
+  const { authConfig, targetUrl } = req.body;
+  try {
+    // TODO: Implement testAuthentication in zapClient
+    const result = await require("./zapClient").testAuthentication(targetUrl, authConfig);
+    res.json(result);
+  } catch (e) {
+    res.status(400).json({ error: e.message });
   }
 });
 

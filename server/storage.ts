@@ -1,5 +1,8 @@
 import { users, type User, type InsertUser } from "@shared/schema";
 import { Subscription, SubscriptionTier, tierLimitsConfig } from "./subscriptionTiers";
+import { v4 as uuidv4 } from 'uuid';
+import PDFDocument from 'pdfkit';
+import { Readable } from 'stream';
 
 interface ZapAlert {
   pluginId: string;
@@ -59,7 +62,7 @@ export interface IStorage {
   saveScanResults(scanId: string, alerts: ZapAlert[]): Promise<void>;
   getScanResults(scanId: string): Promise<ZapAlert[]>;
   getScanHistory(userId: number, limit?: number): Promise<Scan[]>;
-  generateScanReport(scanId: string, format: 'html' | 'json' | 'xml'): Promise<string>;
+  generateScanReport(scanId: string, format: 'html' | 'json' | 'xml' | 'pdf'): Promise<string>;
   getTotalScans(userId: number): Promise<number>;
   getActiveScansCount(userId: number): Promise<number>;
   getCompletedScansCount(userId: number): Promise<number>;
@@ -180,7 +183,7 @@ export class MemStorage implements IStorage {
     return limit ? userScans.slice(0, limit) : userScans;
   }
 
-  async generateScanReport(scanId: string, format: 'html' | 'json' | 'xml'): Promise<string> {
+  async generateScanReport(scanId: string, format: 'html' | 'json' | 'xml' | 'pdf'): Promise<string> {
     const scan = await this.getScan(scanId);
     if (!scan) {
       throw new Error(`Scan with ID ${scanId} not found`);
@@ -251,7 +254,55 @@ export class MemStorage implements IStorage {
               `).join('\n')}
             </alerts>
           </scanReport>`;
+      
+      case 'pdf':
+        // Generate PDF using PDFKit
+        return await this.generatePDFReport(scan, alerts);
     }
+  }
+
+  private async generatePDFReport(scan: Scan, alerts: ZapAlert[]): Promise<string> {
+    const doc = new PDFDocument();
+    const stream = new Readable();
+    const chunks: Buffer[] = [];
+
+    doc.on('data', chunk => chunks.push(chunk));
+    doc.on('end', () => {
+      stream.push(Buffer.concat(chunks));
+      stream.push(null);
+    });
+
+    doc.fontSize(20).text('Security Scan Report', { align: 'center' });
+    doc.moveDown();
+    doc.fontSize(16).text(`Target: ${scan.targetUrl}`);
+    doc.text(`Scan completed: ${scan.endTime?.toLocaleString()}`);
+    doc.moveDown();
+    doc.fontSize(14).text('Summary:');
+    doc.text(`Total Alerts: ${scan.summary?.total || 0}`);
+    doc.text(`High Risk: ${scan.summary?.high || 0}`);
+    doc.text(`Medium Risk: ${scan.summary?.medium || 0}`);
+    doc.text(`Low Risk: ${scan.summary?.low || 0}`);
+    doc.moveDown();
+    doc.fontSize(14).text('Alerts:');
+    alerts.forEach(alert => {
+      doc.text(`Name: ${alert.name}`);
+      doc.text(`Risk: ${alert.risk}`);
+      doc.text(`URL: ${alert.url}`);
+      doc.text(`Description: ${alert.description}`);
+      if (alert.solution) {
+        doc.text(`Solution: ${alert.solution}`);
+      }
+      doc.moveDown();
+    });
+
+    doc.end();
+
+    return new Promise((resolve, reject) => {
+      const buffers: Buffer[] = [];
+      stream.on('data', data => buffers.push(data));
+      stream.on('end', () => resolve(Buffer.concat(buffers).toString('base64')));
+      stream.on('error', reject);
+    });
   }
 
   async getTotalScans(userId: number): Promise<number> {

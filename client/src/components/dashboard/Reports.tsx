@@ -11,13 +11,21 @@ import {
   Cpu,
   Shield,
   Lightbulb,
-  Clock
+  Clock,
+  ChevronDown
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from '@/hooks/use-toast';
+import { useSubscription } from '@/hooks/use-subscription';
+import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger
+} from '@/components/ui/dropdown-menu';
 
 // Interface for Scan/Report data
 interface Report {
@@ -40,6 +48,7 @@ const Reports: React.FC = () => {
   const [activeTab, setActiveTab] = useState('all');
   const [reports, setReports] = useState<Report[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const { subscription, isLoading: isLoadingSubscription, getAvailableReportFormats, getBestAvailableReportFormat } = useSubscription();
 
   // Fetch scan reports on component mount
   useEffect(() => {
@@ -107,6 +116,29 @@ const Reports: React.FC = () => {
     return false;
   });
 
+  // Handle report download based on user's subscription
+  const handleDownloadReport = (reportId: string, format?: string) => {
+    const availableFormats = getAvailableReportFormats();
+    const formatToUse = format || getBestAvailableReportFormat();
+    
+    // If the requested format is not available
+    if (format && !availableFormats.includes(format)) {
+      toast({
+        title: `${format.toUpperCase()} format unavailable`,
+        description: `Your current plan doesn't support ${format.toUpperCase()} reports. Using ${formatToUse.toUpperCase()} instead.`,
+        variant: "default"
+      });
+    }
+    
+    // Open the report URL
+    window.open(`/api/zap/scan/${reportId}/report/${formatToUse}`, '_blank');
+    
+    toast({
+      title: "Report download started",
+      description: `Your ${formatToUse.toUpperCase()} report will be downloaded shortly`
+    });
+  };
+
   return (
     <div className="space-y-6">
       {/* Page Header */}
@@ -151,14 +183,28 @@ const Reports: React.FC = () => {
                           Scanned on {report.scanDate}
                         </div>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-gray-400 hover:text-accent-blue hover:bg-accent-blue/10"
-                        onClick={() => window.open(`/api/zap/scan/${report.id}/report/pdf`, '_blank')}
-                      >
-                        <Download className="h-4 w-4" />
-                      </Button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-gray-400 hover:text-accent-blue hover:bg-accent-blue/10"
+                          >
+                            <Download className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent className="bg-primary-medium border-accent-blue/20 text-white">
+                          {getAvailableReportFormats().map((format) => (
+                            <DropdownMenuItem 
+                              key={format}
+                              onClick={() => handleDownloadReport(report.id, format)}
+                              className="cursor-pointer"
+                            >
+                              Download {format.toUpperCase()}
+                            </DropdownMenuItem>
+                          ))}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
 
                     <div className="grid grid-cols-3 gap-2 mb-4">

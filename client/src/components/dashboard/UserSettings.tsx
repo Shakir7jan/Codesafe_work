@@ -12,7 +12,8 @@ import {
   Save,
   Crown,
   ArrowUpCircle,
-  CheckCircle
+  CheckCircle,
+  AlertCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -27,7 +28,8 @@ import axios from 'axios';
 import { toast } from '@/hooks/use-toast';
 import { TierBadge, tierStyles } from './Dashboard';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import { getCurrentUser, updateProfile, updatePassword } from '@/lib/supabase';
+import { getCurrentUser, updateProfile, updatePassword, deleteAccount } from '@/lib/supabase';
+import { useLocation } from 'wouter';
 
 // Tier pricing information (should match SubscriptionPanel)
 const tierPricing = {
@@ -74,6 +76,9 @@ const UserSettings: React.FC = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
   const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [, setLocation] = useLocation();
 
   useEffect(() => {
     fetchSubscriptionData();
@@ -252,6 +257,39 @@ const UserSettings: React.FC = () => {
     }
   };
 
+  const handleDeleteAccount = async () => {
+    setIsDeleting(true);
+    try {
+      const { error } = await deleteAccount();
+      if (error) {
+        toast({
+          title: 'Error',
+          description: error.message,
+          variant: 'destructive',
+        });
+      } else {
+        toast({
+          title: 'Account Deleted',
+          description: 'Your account has been successfully deleted.',
+        });
+        
+        // Redirect to home page after successful deletion
+        setTimeout(() => {
+          setLocation('/');
+        }, 1500);
+      }
+    } catch (err: any) {
+      toast({
+        title: 'Error',
+        description: err.message || 'Failed to delete account.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsDeleting(false);
+      setShowDeleteDialog(false);
+    }
+  };
+
   // Format date string for display
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -389,7 +427,12 @@ const UserSettings: React.FC = () => {
               <p className="text-gray-300 mb-4">
                 This action is irreversible and will delete all your scan history, reports, and settings.
               </p>
-              <Button variant="outline" className="border-red-500/50 text-red-400 hover:bg-red-500/10">
+              <Button 
+                variant="outline" 
+                className="border-red-500/50 text-red-400 hover:bg-red-500/10"
+                onClick={() => setShowDeleteDialog(true)}
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
                 Delete Account
               </Button>
             </CardContent>
@@ -852,6 +895,73 @@ const UserSettings: React.FC = () => {
                 <>
                   <ArrowUpCircle className="h-4 w-4 mr-2" />
                   Upgrade to {selectedPlan ? selectedPlan.charAt(0).toUpperCase() + selectedPlan.slice(1) : ''}
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Account Confirmation Dialog */}
+      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <DialogContent className="bg-primary-medium border-accent-blue/20 text-gray-100 sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle className="text-xl text-red-400 flex items-center">
+              <AlertCircle className="h-5 w-5 mr-2" />
+              Delete Your Account
+            </DialogTitle>
+            <DialogDescription className="text-gray-400">
+              This action is permanent and cannot be undone
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="py-4">
+            <div className="bg-red-900/20 border border-red-500/30 rounded-md p-4 mb-4">
+              <p className="text-gray-200">All your data will be permanently removed, including:</p>
+              <ul className="list-disc list-inside mt-2 text-gray-300 space-y-1 text-sm">
+                <li>Account information and profile</li>
+                <li>Security scan history and reports</li>
+                <li>Subscription and billing information</li>
+                <li>API keys and custom settings</li>
+              </ul>
+            </div>
+            
+            <p className="text-gray-300">Please type <span className="font-mono text-red-400">DELETE</span> to confirm account deletion.</p>
+            <Input 
+              className="bg-primary-dark border-red-500/30 text-gray-100 mt-2"
+              placeholder="Type DELETE to confirm"
+              onChange={(e) => {
+                const confirmButton = document.getElementById('confirm-delete-button') as HTMLButtonElement;
+                if (confirmButton) {
+                  confirmButton.disabled = e.target.value !== 'DELETE';
+                }
+              }}
+            />
+          </div>
+          
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setShowDeleteDialog(false)}
+              className="border-gray-700"
+            >
+              Cancel
+            </Button>
+            <Button 
+              id="confirm-delete-button"
+              onClick={handleDeleteAccount}
+              className="bg-red-500 hover:bg-red-600 text-white"
+              disabled={true}
+            >
+              {isDeleting ? (
+                <>
+                  <span className="animate-spin mr-2">⟳</span>
+                  Deleting...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Permanently Delete Account
                 </>
               )}
             </Button>

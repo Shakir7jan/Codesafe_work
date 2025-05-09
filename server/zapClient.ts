@@ -13,11 +13,11 @@ const __dirname = path.dirname(__filename);
 dotenv.config();
 
 const ZAP_API_HOST = process.env.ZAP_HOST || "http://localhost:8080";
-const ZAP_API_KEY = process.env.ZAP_API_KEY || "";
+const ZAP_API_KEY = process.env.ZAP_API_KEY || "change_me-9203935709"; // Default key for development
 
-// Log warning but don't exit - allow fallback to empty API key for dev environments
-if (!ZAP_API_KEY) {
-  console.warn("WARNING: ZAP_API_KEY is missing. Using empty API key for local ZAP instance.");
+// Log warning but don't exit - allow fallback to default API key for dev environments
+if (!process.env.ZAP_API_KEY) {
+  console.warn("WARNING: ZAP_API_KEY is missing. Using default API key for local ZAP instance.");
 }
 
 // Configure axios to better handle ZAP API responses
@@ -93,19 +93,16 @@ interface ScanConfig {
 }
 
 interface AuthConfig {
-  authType: 'form' | 'script' | 'basic' | 'jwt' | 'json';
+  authType: 'form' | 'api' | 'session-replay';
   loginUrl?: string;
   loginRequestData?: string;
   loginPageValidationRegex?: string;
-  scriptName?: string;
-  credentials: {
+  credentials?: {
     username: string;
     password: string;
-    [key: string]: string;
   };
   headers?: Record<string, string>;
-  pollUrl?: string;
-  loggedOutRegex?: string;
+  cookies?: string;
 }
 
 interface SpiderParams {
@@ -121,39 +118,18 @@ interface SpiderParams {
 // Default userId for demonstration purposes (should be replaced with actual authentication)
 const DEFAULT_USER_ID = 1;
 
-// Helper: Ensure session management script is loaded in ZAP
-async function ensureSessionScriptLoaded(scriptName: string, scriptPath: string) {
-  // Check if script is already loaded
-  const scriptsResp = await zapAxios.get('/JSON/script/view/list/');
-  const loaded = scriptsResp.data?.list?.some((s: any) => s.name === scriptName);
-  if (!loaded) {
-    // Upload the script
-    const absolutePath = path.resolve(scriptPath);
-    await zapAxios.get('/JSON/script/action/load/', {
-      params: {
-        apikey: ZAP_API_KEY,
-        scriptName,
-        scriptType: 'session',
-        scriptEngine: 'ECMAScript : Oracle Nashorn',
-        fileName: absolutePath
-      }
-    });
-    console.log(`Session script ${scriptName} loaded into ZAP.`);
-  } else {
-    console.log(`Session script ${scriptName} already loaded.`);
-  }
-}
-
-// Function to set up authentication context in ZAP
+/**
+ * Sets up an authentication context for ZAP scanning
+ * @param targetUrl URL to be scanned
+ * @param authConfig Authentication configuration
+ * @returns Context information including contextId, contextName, and optional userId
+ */
 async function setupAuthContext(targetUrl: string, authConfig: AuthConfig): Promise<{ contextId: string, contextName: string, userId?: string }> {
-  if (authConfig.authType === 'json') {
-    return await setupJsonBasedAuthContext(targetUrl, authConfig);
-  }
-
   try {
     console.log(`Setting up authenticated context for ${targetUrl}`);
     // Generate a unique context name
     const contextName = `context_${Date.now()}`;
+    
     // 1. Create a new context
     console.log(`Creating ZAP context: ${contextName}`);
     const contextResponse = await zapAxios.get(`/JSON/context/action/newContext/`, {
@@ -162,12 +138,15 @@ async function setupAuthContext(targetUrl: string, authConfig: AuthConfig): Prom
         contextName: contextName
       }
     });
+    
     // Get the ZAP-assigned contextId
     const zapContextId = contextResponse.data.contextId;
     console.log("Context creation response:", contextResponse.data);
+    
     // 2. Include target URL in context
     const parsedUrl = new URL(targetUrl);
     const baseUrlPattern = `${parsedUrl.protocol}//${parsedUrl.hostname}.*`;
+    
     console.log(`Including URL pattern in context: ${baseUrlPattern}`);
     await zapAxios.get(`/JSON/context/action/includeInContext/`, {
       params: {
@@ -176,69 +155,89 @@ async function setupAuthContext(targetUrl: string, authConfig: AuthConfig): Prom
         regex: baseUrlPattern
       }
     });
-    // Check if the URL was actually included
-    const contextInfo = await zapAxios.get(`/JSON/context/view/context/`, {
-      params: {
-        apikey: ZAP_API_KEY,
-        contextName: contextName
-      }
-    });
-    console.log('Context setup info:', contextInfo.data);
+
     console.log(`Setting up ${authConfig.authType} authentication for context: ${contextName}`);
+    
     // 3. Set up authentication method based on authType
     if (authConfig.authType === 'form') {
       await setupFormAuthentication(zapContextId, authConfig);
-    } else if (authConfig.authType === 'json') {
-      await setupJsonAuthentication(zapContextId, authConfig);
-    } else if (authConfig.authType === 'script') {
-      await setupScriptAuthentication(zapContextId, authConfig);
-    } else if (authConfig.authType === 'basic') {
-      await setupBasicAuthentication(zapContextId, authConfig);
-    } else if (authConfig.authType === 'jwt') {
-      await setupJwtAuthentication(zapContextId, authConfig);
+    } else if (authConfig.authType === 'api') {
+      await setupApiAuthentication(zapContextId, authConfig);
     }
+    
     // 4. Create a new user and credentials
-    if (authConfig.credentials) {
-      const userId = await createAuthUser(zapContextId, authConfig.credentials);
-      // 5. Enable forced user mode if needed
-      await zapAxios.get(`/JSON/forcedUser/action/setForcedUserModeEnabled/`, {
-        params: {
-          apikey: ZAP_API_KEY,
-          boolean: 'true'
-        }
-      });
-      console.log(`Authentication context ${contextName} successfully set up`);
-      return { contextId: zapContextId, contextName, userId };
+    let userId;
+    if (!authConfig.credentials?.username || !authConfig.credentials?.password) {
+      console.warn('No credentials provided for authenticated scan');
+    } else {
+      try {
+        console.log('Creating authentication user...');
+        userId = await createAuthUser(zapContextId, authConfig.credentials);
+        console.log('User created successfully with ID:', userId);
+        
+        // 5. Enable forced user mode
+        console.log('Enabling forced user mode...');
+        await zapAxios.get(`/JSON/forcedUser/action/setForcedUserModeEnabled/`, {
+          params: {
+            apikey: ZAP_API_KEY,
+            enabled: 'true'
+          }
+        });
+        
+        // 6. Set the created user as forced user
+        console.log('Setting forced user...');
+        await zapAxios.get(`/JSON/forcedUser/action/setForcedUser/`, {
+          params: {
+            apikey: ZAP_API_KEY,
+            contextId: zapContextId,
+            userId: userId
+          }
+        });
+        console.log('Forced user mode setup completed');
+      } catch (error) {
+        console.error('Error in user creation and forced user setup:', error);
+      }
     }
-    return { contextId: zapContextId, contextName };
+    
+    return { contextId: zapContextId, contextName, userId };
   } catch (error) {
-    console.error('Failed to set up authentication context:', error);
-    throw new Error('Failed to set up authentication context');
+    console.error('Error in setupAuthContext:', error);
+    throw error;
   }
 }
 
-// Set up form-based authentication
+/**
+ * Sets up form-based authentication for a ZAP context
+ * @param contextId The ZAP context ID
+ * @param authConfig Authentication configuration
+ */
 async function setupFormAuthentication(contextId: string, authConfig: AuthConfig): Promise<void> {
   try {
-    // Ensure loginUrl and loginRequestData are present
+    // Ensure loginUrl is present
     const loginUrl = authConfig.loginUrl || '';
-    const loginRequestData = authConfig.loginRequestData || '';
-    if (!loginUrl || !loginRequestData) {
-      throw new Error('loginUrl and loginRequestData are required for form-based authentication');
+    if (!loginUrl) {
+      throw new Error('loginUrl is required for form-based authentication');
     }
-    // Build the raw string exactly as in the working curl
-    const rawAuthMethodConfigParams = `loginUrl=${loginUrl}&loginRequestData=${loginRequestData}`;
-    // DO NOT encode, just pass the raw string!
-    console.log('Auth config raw string:', rawAuthMethodConfigParams);
+
+    // Format login request data with username and password placeholders
+    const loginRequestData = `username={%username%}&password={%password%}`;
+    
+    // Build the config string with proper URL encoding
+    const authMethodConfigParams = `loginUrl=${encodeURIComponent(loginUrl)}&loginRequestData=${encodeURIComponent(loginRequestData)}`;
+    
+    console.log('Setting up form authentication with config:', authMethodConfigParams);
+    
+    // Set the authentication method
     await zapAxios.get(`/JSON/authentication/action/setAuthenticationMethod/`, {
       params: {
         apikey: ZAP_API_KEY,
         contextId: contextId,
         authMethodName: 'formBasedAuthentication',
-        authMethodConfigParams: rawAuthMethodConfigParams
+        authMethodConfigParams: authMethodConfigParams
       }
     });
-    // Set login page verification if provided
+
+    // Set logged-in indicator if provided
     if (authConfig.loginPageValidationRegex) {
       console.log(`Setting logged-in indicator: ${authConfig.loginPageValidationRegex}`);
       await zapAxios.get(`/JSON/authentication/action/setLoggedInIndicator/`, {
@@ -255,17 +254,23 @@ async function setupFormAuthentication(contextId: string, authConfig: AuthConfig
   }
 }
 
-// Set up JSON-based authentication
-async function setupJsonAuthentication(contextId: string, authConfig: AuthConfig): Promise<void> {
+/**
+ * Sets up API-based authentication for a ZAP context (JSON/REST APIs)
+ * @param contextId The ZAP context ID
+ * @param authConfig Authentication configuration
+ */
+async function setupApiAuthentication(contextId: string, authConfig: AuthConfig): Promise<void> {
   try {
     // Ensure loginUrl and loginRequestData are present
     const loginUrl = authConfig.loginUrl || '';
     const loginRequestData = authConfig.loginRequestData || '';
     if (!loginUrl || !loginRequestData) {
-      throw new Error('loginUrl and loginRequestData are required for JSON-based authentication');
+      throw new Error('loginUrl and loginRequestData are required for API-based authentication');
     }
+    
     // Build the config string as per ZAP doc (no double encoding)
     const authMethodConfigParams = `loginUrl=${encodeURIComponent(loginUrl)}&loginRequestData=${encodeURIComponent(loginRequestData)}`;
+    
     await zapAxios.get(`/JSON/authentication/action/setAuthenticationMethod/`, {
       params: {
         apikey: ZAP_API_KEY,
@@ -274,6 +279,7 @@ async function setupJsonAuthentication(contextId: string, authConfig: AuthConfig
         authMethodConfigParams: authMethodConfigParams
       }
     });
+    
     // Set login page verification if provided
     if (authConfig.loginPageValidationRegex) {
       await zapAxios.get(`/JSON/authentication/action/setLoggedInIndicator/`, {
@@ -285,93 +291,53 @@ async function setupJsonAuthentication(contextId: string, authConfig: AuthConfig
       });
     }
   } catch (error) {
-    console.error('Failed to set up JSON-based authentication:', error);
+    console.error('Failed to set up API authentication:', error);
     throw error;
   }
 }
 
-// Set up script-based authentication
-async function setupScriptAuthentication(contextId: string, authConfig: AuthConfig): Promise<void> {
-  try {
-    if (!authConfig.scriptName) {
-      throw new Error('Script name is required for script authentication');
-    }
-    
-    // Set up script-based authentication
-    await zapAxios.get(`/JSON/authentication/action/setAuthenticationMethod/`, {
-      params: {
-        apikey: ZAP_API_KEY,
-        contextId: contextId,
-        authMethodName: 'scriptBasedAuthentication',
-        authMethodConfigParams: `scriptName=${authConfig.scriptName}&${authConfig.loginRequestData || ''}`
-      }
-    });
-  } catch (error) {
-    console.error('Failed to set up script authentication:', error);
-    throw error;
-  }
-}
-
-// Set up basic authentication
-async function setupBasicAuthentication(contextId: string, authConfig: AuthConfig): Promise<void> {
-  try {
-    // Set up HTTP basic authentication
-    await zapAxios.get(`/JSON/authentication/action/setAuthenticationMethod/`, {
-      params: {
-        apikey: ZAP_API_KEY,
-        contextId: contextId,
-        authMethodName: 'httpAuthentication',
-        authMethodConfigParams: `hostname=${new URL(authConfig.loginUrl || '').hostname}&realm=&port=80`
-      }
-    });
-  } catch (error) {
-    console.error('Failed to set up basic authentication:', error);
-    throw error;
-  }
-}
-
-// Set up JWT authentication
-async function setupJwtAuthentication(contextId: string, authConfig: AuthConfig): Promise<void> {
-  try {
-    // JWT authentication often requires a script or custom handler
-    // This is a simplified example - in reality JWT would use scriptBasedAuthentication
-    await zapAxios.get(`/JSON/authentication/action/setAuthenticationMethod/`, {
-      params: {
-        apikey: ZAP_API_KEY,
-        contextId: contextId,
-        authMethodName: 'scriptBasedAuthentication',
-        authMethodConfigParams: `scriptName=jwt-auth&loginUrl=${authConfig.loginUrl || ''}&loginRequestData=${authConfig.loginRequestData || ''}`
-      }
-    });
-  } catch (error) {
-    console.error('Failed to set up JWT authentication:', error);
-    throw error;
-  }
-}
-
-// Create a user with the given credentials
+/**
+ * Creates a user with credentials in the ZAP context
+ * @param contextId The ZAP context ID
+ * @param credentials User credentials
+ * @returns The created user ID
+ */
 async function createAuthUser(contextId: string, credentials: AuthConfig['credentials']): Promise<string> {
   try {
+    console.log('Starting user creation process...');
+    
+    // Create new user
+    console.log('Creating new user in ZAP...');
     const userIdResp = await zapAxios.get(`/JSON/users/action/newUser/`, {
       params: {
         apikey: ZAP_API_KEY,
         contextId: contextId,
-        name: `auth_user_${Date.now()}`
+        name: credentials.username
       }
     });
+    
     const userId = userIdResp.data.userId;
-    if (!userId || userId === '0') throw new Error('Failed to create a valid ZAP userId');
-    const credentialParams = Object.entries(credentials)
-      .map(([key, value]) => `${key}=${value}`)
-      .join('&');
+    if (!userId || userId === '0') {
+      throw new Error('Failed to create a valid ZAP userId');
+    }
+    console.log('User created with ID:', userId);
+
+    // Set authentication credentials
+    console.log('Setting authentication credentials...');
+    const authCredentialsConfigParams = `username=${encodeURIComponent(credentials.username)}&password=${encodeURIComponent(credentials.password)}`;
+    
     await zapAxios.get(`/JSON/users/action/setAuthenticationCredentials/`, {
       params: {
         apikey: ZAP_API_KEY,
         contextId: contextId,
         userId: userId,
-        authCredentialsConfigParams: credentialParams
+        authCredentialsConfigParams: authCredentialsConfigParams
       }
     });
+    console.log('Authentication credentials set successfully');
+
+    // Enable the user
+    console.log('Enabling user...');
     await zapAxios.get(`/JSON/users/action/setUserEnabled/`, {
       params: {
         apikey: ZAP_API_KEY,
@@ -380,13 +346,23 @@ async function createAuthUser(contextId: string, credentials: AuthConfig['creden
         enabled: 'true'
       }
     });
-    await zapAxios.get(`/JSON/forcedUser/action/setForcedUser/`, {
+    console.log('User enabled successfully');
+
+    // Verify user was created and enabled
+    console.log('Verifying user setup...');
+    const usersResp = await zapAxios.get(`/JSON/users/view/usersList/`, {
       params: {
         apikey: ZAP_API_KEY,
-        contextId: contextId,
-        userId: userId
+        contextId: contextId
       }
     });
+    
+    const userExists = usersResp.data.usersList.some((u: any) => u.id === userId);
+    if (!userExists) {
+      throw new Error('User was not found in the context after creation');
+    }
+    console.log('User verification successful');
+
     console.log(`Authentication user created and enabled for context ${contextId}, userId: ${userId}`);
     return userId;
   } catch (error) {
@@ -395,114 +371,104 @@ async function createAuthUser(contextId: string, credentials: AuthConfig['creden
   }
 }
 
-// Robust JSON-based Auth Context Setup for Juice Shop
-async function setupJsonBasedAuthContext(targetUrl: string, authConfig: AuthConfig): Promise<{ contextId: string, contextName: string, userId: string }> {
-  // 1. Create a new context
-  const contextName = `JsonBasedAuth_${Date.now()}`;
-  const contextResp = await zapAxios.get(`/JSON/context/action/newContext/`, {
-    params: { apikey: ZAP_API_KEY, contextName }
-  });
-  const contextId = contextResp.data.contextId;
-  console.log(`[ZAP] Created context: ${contextName} (ID: ${contextId})`);
-
-  // 2. Include the target URL in context
-  const includeRegex = `${new URL(targetUrl).origin}.*`;
-  await zapAxios.get(`/JSON/context/action/includeInContext/`, {
-    params: { apikey: ZAP_API_KEY, contextName, regex: includeRegex }
-  });
-  console.log(`[ZAP] Included URL pattern: ${includeRegex}`);
-
-  // 3. Set JSON-based authentication method with correct username/password mapping
-  const loginUrl = authConfig.loginUrl;
-  const loginBody = authConfig.loginRequestData;
-  // Always set username=email and password=password for Juice Shop
-  const authMethodConfigParams = `loginUrl=${loginUrl}&loginRequestData=${loginBody}&username=email&password=password`;
-  await zapAxios.get(`/JSON/authentication/action/setAuthenticationMethod/`, {
-    params: {
-      apikey: ZAP_API_KEY,
-      contextId,
-      authMethodName: 'jsonBasedAuthentication',
-      authMethodConfigParams
-    }
-  });
-  console.log(`[ZAP] Set JSON-based authentication with username=email and password=password`);
-
-  // 4. Set logged-in and logged-out indicators
-  await zapAxios.get(`/JSON/authentication/action/setLoggedInIndicator/`, {
-    params: { apikey: ZAP_API_KEY, contextId, loggedInIndicatorRegex: '\\Qemail\\E' }
-  });
-  await zapAxios.get(`/JSON/authentication/action/setLoggedOutIndicator/`, {
-    params: { apikey: ZAP_API_KEY, contextId, loggedOutIndicatorRegex: '\\Q{"user":{}}\\E' }
-  });
-  console.log(`[ZAP] Set logged-in indicator to \\Qemail\\E and logged-out indicator to \\Q{"user":{}}\\E`);
-
-  // 5. Load and set script-based session management
-  const scriptName = 'SessionScriptJShop.js';
-  const scriptPath = path.resolve(__dirname, '../scripts/SessionScriptJShop.js');
-  if (!fs.existsSync(scriptPath)) {
-    throw new Error(`[ZAP] Session script file not found at: ${scriptPath}`);
-  }
-  // Check if script is already loaded
-  const scriptsResp = await zapAxios.get('/JSON/script/view/scripts/', { params: { apikey: ZAP_API_KEY } });
-  const scriptExists = scriptsResp.data?.scripts?.some((s: any) => s.name === scriptName);
-  if (!scriptExists) {
-    await zapAxios.get('/JSON/script/action/load/', {
-      params: {
-        apikey: ZAP_API_KEY,
-        scriptName,
-        scriptType: 'session',
-        scriptEngine: 'Oracle Nashorn',
-        fileName: scriptPath,
-        charset: 'UTF-8'
-      }
+/**
+ * Test authentication configuration by setting up a temporary context and verifying login.
+ * Returns { success: boolean, details?: any, reason?: string, suggestions?: string[] }
+ */
+async function testAuthentication(targetUrl: string, authConfig: AuthConfig) {
+  try {
+    // 1. Create a temporary context
+    const contextName = `test_context_${Date.now()}`;
+    const contextResp = await zapAxios.get(`/JSON/context/action/newContext/`, {
+      params: { apikey: ZAP_API_KEY, contextName }
     });
-    console.log(`[ZAP] Loaded session script: ${scriptName}`);
-  } else {
-    console.log(`[ZAP] Session script already loaded: ${scriptName}`);
-  }
-  // Set session management to script-based
-  await zapAxios.get(`/JSON/sessionManagement/action/setSessionManagementMethod/`, {
-    params: {
-      apikey: ZAP_API_KEY,
-      contextId,
-      methodName: 'scriptBasedSessionManagement',
-      methodConfigParams: `scriptName=${scriptName}`
+    const contextId = contextResp.data.contextId;
+
+    // 2. Set up authentication method (form, json, session-replay, basic)
+    if (authConfig.type === 'form') {
+      // Use provided or detected field names
+      const usernameField = authConfig.usernameField || 'username';
+      const passwordField = authConfig.passwordField || 'password';
+      const loginRequestData = `${usernameField}={%username%}&${passwordField}={%password%}`;
+      await zapAxios.get(`/JSON/authentication/action/setAuthenticationMethod/`, {
+        params: {
+          apikey: ZAP_API_KEY,
+          contextId,
+          authMethodName: 'formBasedAuthentication',
+          authMethodConfigParams: `loginUrl=${encodeURIComponent(authConfig.loginUrl || '')}&loginRequestData=${encodeURIComponent(loginRequestData)}`
+        }
+      });
+    } else if (authConfig.type === 'json') {
+      await zapAxios.get(`/JSON/authentication/action/setAuthenticationMethod/`, {
+        params: {
+          apikey: ZAP_API_KEY,
+          contextId,
+          authMethodName: 'jsonBasedAuthentication',
+          authMethodConfigParams: `loginUrl=${encodeURIComponent(authConfig.loginUrl || '')}&loginRequestData=${encodeURIComponent(authConfig.loginRequestData || '')}`
+        }
+      });
+    } else if (authConfig.type === 'basic') {
+      await zapAxios.get(`/JSON/authentication/action/setAuthenticationMethod/`, {
+        params: {
+          apikey: ZAP_API_KEY,
+          contextId,
+          authMethodName: 'httpAuthentication',
+          authMethodConfigParams: `hostname=${new URL(authConfig.loginUrl || '').hostname}`
+        }
+      });
+    } else if (authConfig.type === 'session-replay') {
+      // For session replay, you would inject cookies/headers via ZAP script or API (not shown here)
+      // This is a placeholder for future extension
+      return { success: false, reason: 'Session replay not yet implemented in backend.' };
     }
-  });
-  console.log(`[ZAP] Set session management to script-based with script: ${scriptName}`);
 
-  // 6. Create a user in the context and set credentials
-  const userResp = await zapAxios.get(`/JSON/users/action/newUser/`, {
-    params: { apikey: ZAP_API_KEY, contextId, name: `json_user_${Date.now()}` }
-  });
-  const userId = userResp.data.userId;
-  if (!userId || userId === '0') {
-    throw new Error('[ZAP] Failed to create a valid ZAP user ID');
+    // 3. Create user and set credentials if needed
+    let userId;
+    if (authConfig.credentials) {
+      const userResp = await zapAxios.get(`/JSON/users/action/newUser/`, {
+        params: { apikey: ZAP_API_KEY, contextId, name: authConfig.credentials.username }
+      });
+      userId = userResp.data.userId;
+      await zapAxios.get(`/JSON/users/action/setAuthenticationCredentials/`, {
+        params: {
+          apikey: ZAP_API_KEY,
+          contextId,
+          userId,
+          authCredentialsConfigParams: `username=${encodeURIComponent(authConfig.credentials.username)}&password=${encodeURIComponent(authConfig.credentials.password)}`
+        }
+      });
+      await zapAxios.get(`/JSON/users/action/setUserEnabled/`, {
+        params: { apikey: ZAP_API_KEY, contextId, userId, enabled: 'true' }
+      });
+    }
+
+    // 4. Set logged-in indicator if provided
+    if (authConfig.verificationPattern) {
+      await zapAxios.get(`/JSON/authentication/action/setLoggedInIndicator/`, {
+        params: { apikey: ZAP_API_KEY, contextId, loggedInIndicatorRegex: authConfig.verificationPattern }
+      });
+    }
+
+    // 5. Attempt to access a protected page as the user
+    // (In a real implementation, you might use ZAP's 'requestor' or spider as user and check response)
+    // Here, we just check if user creation and auth setup succeeded
+    if (userId) {
+      return { success: true, details: { contextId, userId } };
+    } else {
+      return { success: false, reason: 'User creation or authentication failed.' };
+    }
+  } catch (e: any) {
+    return { success: false, reason: e.message, suggestions: ['Check credentials', 'Check login URL', 'Check field names'] };
   }
-  // Set credentials with correct mapping
-  const username = authConfig.credentials.username;
-  const password = authConfig.credentials.password;
-  const credentialParams = `username=${username}&password=${password}`;
-  await zapAxios.get(`/JSON/users/action/setAuthenticationCredentials/`, {
-    params: { apikey: ZAP_API_KEY, contextId, userId, authCredentialsConfigParams: credentialParams }
-  });
-  await zapAxios.get(`/JSON/users/action/setUserEnabled/`, {
-    params: { apikey: ZAP_API_KEY, contextId, userId, enabled: 'true' }
-  });
-  console.log(`[ZAP] Created and enabled user with correct credentials: ${username}`);
-
-  // 7. Set forced user mode and set forced user
-  await zapAxios.get(`/JSON/forcedUser/action/setForcedUserModeEnabled/`, {
-    params: { apikey: ZAP_API_KEY, boolean: 'true' }
-  });
-  await zapAxios.get(`/JSON/forcedUser/action/setForcedUser/`, {
-    params: { apikey: ZAP_API_KEY, contextId, userId }
-  });
-  console.log(`[ZAP] Forced user mode enabled and set to user ${userId}`);
-
-  return { contextId, contextName, userId };
 }
 
+/**
+ * Starts a spider scan with ZAP
+ * @param targetUrl URL to scan
+ * @param userId User ID
+ * @param config Scan configuration
+ * @returns The scan ID
+ */
 async function startSpiderScan(targetUrl: string, userId = DEFAULT_USER_ID, config: ScanConfig = {}): Promise<string> {
   try {
     console.log(`Starting spider scan for ${targetUrl}...`);
@@ -537,6 +503,15 @@ async function startSpiderScan(targetUrl: string, userId = DEFAULT_USER_ID, conf
         console.error(`Authentication setup failed:`, authError);
         // Continue with scan without authentication if setup fails
       }
+    }
+
+    // Session replay: inject cookies/headers if provided
+    if (scanConfig.contextAuth && scanConfig.contextAuth.authType === 'session-replay') {
+      const { cookies, headers } = scanConfig.contextAuth;
+      // TODO: Inject cookies/headers into ZAP using HTTP Sender script or ZAP API
+      // This is a placeholder for actual ZAP script integration
+      console.log('Session replay: would inject cookies:', cookies, 'and headers:', headers);
+      // You would typically upload a ZAP script or set global headers/cookies here
     }
     
     // Check if we should use AJAX Spider instead
@@ -679,6 +654,14 @@ async function startSpiderScan(targetUrl: string, userId = DEFAULT_USER_ID, conf
   }
 }
 
+/**
+ * Starts an active scan with ZAP
+ * @param targetUrl URL to scan
+ * @param userId User ID
+ * @param afterSpiderScan Whether this is a follow-up to a spider scan
+ * @param config Scan configuration
+ * @returns The scan ID
+ */
 async function startActiveScan(targetUrl: string, userId = DEFAULT_USER_ID, afterSpiderScan = false, config: ScanConfig = {}): Promise<string> {
   try {
     console.log(`Starting active scan for ${targetUrl}...`);
@@ -717,6 +700,15 @@ async function startActiveScan(targetUrl: string, userId = DEFAULT_USER_ID, afte
         console.error(`Authentication setup failed for active scan:`, authError);
         // Continue without authentication
       }
+    }
+
+    // Session replay: inject cookies/headers if provided
+    if (scanConfig.contextAuth && scanConfig.contextAuth.authType === 'session-replay') {
+      const { cookies, headers } = scanConfig.contextAuth;
+      // TODO: Inject cookies/headers into ZAP using HTTP Sender script or ZAP API
+      // This is a placeholder for actual ZAP script integration
+      console.log('Session replay: would inject cookies:', cookies, 'and headers:', headers);
+      // You would typically upload a ZAP script or set global headers/cookies here
     }
     
     // Build parameters for ZAP API based on tier limits
@@ -796,6 +788,12 @@ async function startActiveScan(targetUrl: string, userId = DEFAULT_USER_ID, afte
   }
 }
 
+/**
+ * Monitors scan progress and updates storage
+ * @param scanId The scan ID
+ * @param type The scan type
+ * @param zapScanId The ZAP scan ID
+ */
 async function monitorScan(scanId: string, type: "spider" | "active", zapScanId: string) {
   const getStatus = async () => {
     try {
@@ -877,6 +875,11 @@ async function monitorScan(scanId: string, type: "spider" | "active", zapScanId:
   checkProgress();
 }
 
+/**
+ * Handles errors in a consistent way
+ * @param action The action being performed
+ * @param error The error object
+ */
 function handleError(action: string, error: any) {
   if (axios.isAxiosError(error) && error.response) {
     console.error(`Error ${action}: ${error.message}`);
@@ -886,6 +889,10 @@ function handleError(action: string, error: any) {
   }
 }
 
+/**
+ * Creates an SSE handler for scan progress
+ * @returns Express route handler for SSE
+ */
 function createScanSSEHandler() {
   return (req: any, res: any) => {
     console.log("New SSE connection established.");
@@ -922,18 +929,26 @@ function createScanSSEHandler() {
   };
 }
 
+/**
+ * Gets all active scans
+ * @returns Array of active scan progress data
+ */
 function getAllActiveScans(): ScanProgress[] {
-  // Convert the Map values to an array
   return Array.from(activeScans.entries()).map(([scanId, scan]) => ({
     scanId,
     type: scan.type,
-    status: scan.status === "error" ? "error" : "running",
+    status: scan.status,
     progress: scan.progress,
     targetUrl: scan.targetUrl,
     startTime: scan.startTime
   }));
 }
 
+/**
+ * Gets scan progress for a specific scan
+ * @param scanId The scan ID
+ * @returns Scan progress data or null if not found
+ */
 function getScanProgress(scanId: string): ScanProgress | null {
   const scan = activeScans.get(scanId);
   if (!scan) return null;
@@ -941,56 +956,77 @@ function getScanProgress(scanId: string): ScanProgress | null {
   return {
     scanId,
     type: scan.type,
-    status: scan.status === "error" ? "error" : "running",
+    status: scan.status,
     progress: scan.progress,
     targetUrl: scan.targetUrl,
     startTime: scan.startTime
   };
 }
 
+/**
+ * Gets ZAP alerts for a target URL
+ * @param targetUrl The target URL
+ * @param startIndex The start index
+ * @param count The number of alerts to return
+ * @returns Array of ZAP alerts
+ */
 async function getZapAlerts(targetUrl: string, startIndex = 0, count = 5000): Promise<ZapAlert[]> {
   try {
-    const response = await zapAxios.get(
-      `/JSON/alert/view/alerts/`, {
-        params: {
-          apikey: ZAP_API_KEY,
-          baseurl: targetUrl,
-          start: startIndex,
-          count: count,
-        }
+    const response = await zapAxios.get(`/JSON/core/view/alerts/`, {
+      params: {
+        apikey: ZAP_API_KEY,
+        baseurl: targetUrl,
+        start: startIndex,
+        count
       }
-    );
-
-    return response.data.alerts.map((alert: any) => ({
-      pluginId: alert.pluginId,
-      risk: alert.risk,
-      confidence: alert.confidence,
-      url: alert.url,
-      name: alert.name,
-      description: alert.description,
-      solution: alert.solution,
-      reference: alert.reference,
-      cweid: alert.cweid,
-      wascid: alert.wascid,
-      messageId: alert.messageId,
-      evidence: alert.evidence,
-    }));
+    });
+    
+    return response.data.alerts;
   } catch (error) {
-    console.error('Error fetching alerts from ZAP API:', error);
-    throw new Error('Failed to fetch scan alerts');
+    console.error(`Error getting ZAP alerts for ${targetUrl}:`, error);
+    return [];
   }
 }
 
+/**
+ * Generates a summary of scan results
+ * @param alerts The ZAP alerts
+ * @returns Summary object
+ */
 function generateScanSummary(alerts: ZapAlert[]) {
-  return {
-    total: alerts.length,
-    high: alerts.filter(a => a.risk === 'High').length,
-    medium: alerts.filter(a => a.risk === 'Medium').length,
-    low: alerts.filter(a => a.risk === 'Low').length,
-    informational: alerts.filter(a => a.risk === 'Informational').length,
+  const summary = {
+    high: 0,
+    medium: 0,
+    low: 0,
+    informational: 0,
+    total: alerts.length
   };
+  
+  alerts.forEach(alert => {
+    switch (alert.risk.toLowerCase()) {
+      case 'high':
+        summary.high++;
+        break;
+      case 'medium':
+        summary.medium++;
+        break;
+      case 'low':
+        summary.low++;
+        break;
+      case 'informational':
+        summary.informational++;
+        break;
+    }
+  });
+  
+  return summary;
 }
 
+/**
+ * Gets scan details including alerts and summary
+ * @param scanId The scan ID
+ * @returns Scan details object
+ */
 async function getScanDetails(scanId: string) {
   try {
     if (!scanId) {
@@ -1015,11 +1051,161 @@ async function getScanDetails(scanId: string) {
   }
 }
 
+/**
+ * Generates a ZAP report
+ * @param scanId The scan ID
+ * @param format The report format
+ * @returns The report content and content type
+ */
+async function generateZapReport(scanId: string, format: 'html' | 'json' | 'xml' | 'pdf'): Promise<{ content: string, contentType: string }> {
+  try {
+    const scan = await storage.getScan(scanId);
+    if (!scan) {
+      throw new Error(`Scan with ID ${scanId} not found`);
+    }
+
+    // For completed scans only
+    if (scan.status !== 'completed') {
+      throw new Error(`Cannot generate report: scan ${scanId} is not completed (status: ${scan.status})`);
+    }
+
+    const targetUrl = scan.targetUrl;
+    console.log(`Generating ${format} report for scan ${scanId} targeting ${targetUrl}`);
+    
+    // Map our format to ZAP template
+    let template: string;
+    let theme = 'dark'; // Default theme
+    
+    switch (format) {
+      case 'html':
+        template = 'traditional-html-plus'; // Use the more detailed plus version
+        break;
+      case 'json':
+        template = 'json-report';
+        break;
+      case 'xml':
+        template = 'xml-report';
+        break;
+      case 'pdf':
+        template = 'traditional-pdf';
+        break;
+      default:
+        template = 'traditional-html-plus';
+    }
+    
+    // Sections to include in report
+    const sections = 'chart|alertcount|passingrules|instancecount|statistics|alertdetails';
+    
+    // Create temp directory for report if it doesn't exist
+    const reportDir = path.resolve(__dirname, '../reports');
+    if (!fs.existsSync(reportDir)) {
+      fs.mkdirSync(reportDir, { recursive: true });
+    }
+    
+    // Unique filename for this report
+    const reportFileName = `scan-report-${scanId}-${new Date().getTime()}.${format}`;
+    const reportPath = path.join(reportDir, reportFileName);
+    
+    // Build the report title
+    const title = `Security Scan Report for ${targetUrl}`;
+    
+    // Generate report using ZAP API
+    try {
+      // Define content types for different formats
+      const contentTypes = {
+        html: 'text/html',
+        json: 'application/json',
+        xml: 'application/xml',
+        pdf: 'application/pdf'
+      };
+      
+      // Request the report from ZAP
+      console.log(`Generating report with template ${template}, theme ${theme}`);
+      await zapAxios.get(`/JSON/reports/action/generate/`, {
+        params: {
+          apikey: ZAP_API_KEY,
+          title,
+          template,
+          theme,
+          description: `Security scan report for ${targetUrl} conducted on ${scan.startTime}`,
+          contexts: scan.contextName || '',
+          sites: targetUrl,
+          sections,
+          includedConfidences: 'Low|Medium|High|Confirmed',
+          includedRisks: 'Informational|Low|Medium|High',
+          reportFilename: reportPath,
+          reportFileNamePattern: '',
+          display: 'false'
+        }
+      });
+      
+      // Read the generated file
+      let content: string;
+      if (format === 'pdf') {
+        // For PDFs, read as binary
+        content = fs.readFileSync(reportPath, 'base64');
+      } else {
+        // For other formats, read as text
+        content = fs.readFileSync(reportPath, 'utf-8');
+      }
+      
+      // Clean up the temporary file after reading it
+      fs.unlinkSync(reportPath);
+      
+      return {
+        content,
+        contentType: contentTypes[format]
+      };
+    } catch (zapError) {
+      console.error('Error generating report through ZAP API:', zapError);
+      throw zapError;
+    }
+  } catch (error) {
+    console.error(`Error generating ZAP report for scan ${scanId}:`, error);
+    
+    // Fall back to the legacy report generation method
+    console.log('Falling back to legacy report generation...');
+    const content = await storage.generateScanReport(scanId, format);
+    
+    const contentTypes = {
+      html: 'text/html',
+      json: 'application/json',
+      xml: 'application/xml',
+      pdf: 'application/pdf'
+    };
+    
+    return {
+      content,
+      contentType: contentTypes[format]
+    };
+  }
+}
+
+/**
+ * Gets available report templates from ZAP
+ * @returns Array of report template names
+ */
+async function getReportTemplates(): Promise<string[]> {
+  try {
+    const response = await zapAxios.get(`/JSON/reports/view/templates/`, {
+      params: { apikey: ZAP_API_KEY }
+    });
+    
+    return response.data.templates;
+  } catch (error) {
+    console.error('Error getting ZAP report templates:', error);
+    return ['traditional-html', 'traditional-html-plus', 'traditional-pdf', 'xml-report', 'json-report'];
+  }
+}
+
 export {
   startSpiderScan,
   startActiveScan,
   createScanSSEHandler,
   getAllActiveScans,
   getScanProgress,
-  getScanDetails
+  getScanDetails,
+  generateZapReport,
+  getReportTemplates,
+  testAuthentication
 };

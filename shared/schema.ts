@@ -15,3 +15,19 @@ export const insertUserSchema = createInsertSchema(users).pick({
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
+
+export interface AuthConfig {
+  type: 'form' | 'json' | 'session-replay' | 'basic';
+  loginUrl?: string;
+  logoutUrl?: string;
+  usernameField?: string;
+  passwordField?: string;
+  credentials?: {
+    username: string;
+    password: string;
+    [key: string]: string;
+  };
+  verificationPattern?: string;
+  sessionCookies?: string[];
+  headers?: Record<string, string>;
+}

@@ -23,9 +23,16 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
 import { toast } from '@/hooks/use-toast';
+import { useSubscription } from '@/hooks/use-subscription';
+import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger
+} from '@/components/ui/dropdown-menu';
 
 interface ScanDetailReportProps {
-  scanId: string; // Change type to string
+  scanId: string;
   onBack: () => void;
 }
 
@@ -35,6 +42,7 @@ const ScanDetailReport: React.FC<ScanDetailReportProps> = ({ scanId, onBack }) =
   const [scanDetails, setScanDetails] = useState<any>(null);
   const [vulnerabilityData, setVulnerabilityData] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const { getAvailableReportFormats, getBestAvailableReportFormat } = useSubscription();
 
   useEffect(() => {
     fetchScanDetails();
@@ -43,7 +51,7 @@ const ScanDetailReport: React.FC<ScanDetailReportProps> = ({ scanId, onBack }) =
   const fetchScanDetails = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch(`/api/zap/scan/${scanId}`); // Use scanId directly
+      const response = await fetch(`/api/zap/scan/${scanId}`);
       if (!response.ok) throw new Error('Failed to fetch scan details');
       const data = await response.json();
 
@@ -65,7 +73,6 @@ const ScanDetailReport: React.FC<ScanDetailReportProps> = ({ scanId, onBack }) =
         }
       });
 
-      // Transform the vulnerability data to match the expected format
       const transformedVulnerabilities = (data.results || []).map((vuln: any, index: number) => ({
         id: index,
         title: vuln.name || 'Unknown Vulnerability',
@@ -110,10 +117,23 @@ const ScanDetailReport: React.FC<ScanDetailReportProps> = ({ scanId, onBack }) =
     });
   };
   
-  const handleDownloadReport = () => {
+  const handleDownloadReport = (format?: string) => {
+    const availableFormats = getAvailableReportFormats();
+    const formatToUse = format || getBestAvailableReportFormat();
+    
+    if (format && !availableFormats.includes(format)) {
+      toast({
+        title: `${format.toUpperCase()} format unavailable`,
+        description: `Your current plan doesn't support ${format.toUpperCase()} reports. Using ${formatToUse.toUpperCase()} instead.`,
+        variant: "default"
+      });
+    }
+    
+    window.open(`/api/zap/scan/${scanId}/report/${formatToUse}`, '_blank');
+    
     toast({
       title: "Report download started",
-      description: "Your report will be downloaded shortly",
+      description: `Your ${formatToUse.toUpperCase()} report will be downloaded shortly`
     });
   };
   
@@ -152,7 +172,6 @@ const ScanDetailReport: React.FC<ScanDetailReportProps> = ({ scanId, onBack }) =
 
   return (
     <div className="space-y-6">
-      {/* Page Header with Back Button */}
       <div className="flex flex-col space-y-3">
         <Button 
           variant="ghost" 
@@ -187,18 +206,30 @@ const ScanDetailReport: React.FC<ScanDetailReportProps> = ({ scanId, onBack }) =
               <Share2 className="mr-2 h-4 w-4" />
               Share
             </Button>
-            <Button 
-              className="bg-accent-blue hover:bg-accent-blue/90 text-white"
-              onClick={handleDownloadReport}
-            >
-              <Download className="mr-2 h-4 w-4" />
-              Download Report
-            </Button>
+            
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button className="bg-accent-blue hover:bg-accent-blue/90 text-white">
+                  <Download className="mr-2 h-4 w-4" />
+                  Download Report
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="bg-primary-medium border-accent-blue/20 text-white">
+                {getAvailableReportFormats().map((format) => (
+                  <DropdownMenuItem 
+                    key={format}
+                    onClick={() => handleDownloadReport(format)}
+                    className="cursor-pointer"
+                  >
+                    Download {format.toUpperCase()}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
       </div>
       
-      {/* Tab Navigation */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList className="bg-primary-medium/30 border border-accent-blue/20 p-1">
           <TabsTrigger 
@@ -233,9 +264,7 @@ const ScanDetailReport: React.FC<ScanDetailReportProps> = ({ scanId, onBack }) =
           </TabsTrigger>
         </TabsList>
         
-        {/* Overview Tab Content */}
         <TabsContent value="overview" className="space-y-6">
-          {/* Summary Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <Card className="bg-primary-medium/30 border-accent-blue/20">
               <CardContent className="p-4">
@@ -286,7 +315,6 @@ const ScanDetailReport: React.FC<ScanDetailReportProps> = ({ scanId, onBack }) =
             </Card>
           </div>
           
-          {/* Vulnerability Distribution Card */}
           <Card className="bg-primary-medium/30 border-accent-blue/20">
             <CardHeader>
               <CardTitle>Vulnerability Severity Distribution</CardTitle>
@@ -345,7 +373,6 @@ const ScanDetailReport: React.FC<ScanDetailReportProps> = ({ scanId, onBack }) =
             </CardContent>
           </Card>
           
-          {/* Top Vulnerabilities Card */}
           <Card className="bg-primary-medium/30 border-accent-blue/20">
             <CardHeader>
               <CardTitle>Critical Vulnerabilities</CardTitle>
@@ -385,7 +412,6 @@ const ScanDetailReport: React.FC<ScanDetailReportProps> = ({ scanId, onBack }) =
           </Card>
         </TabsContent>
         
-        {/* Vulnerability Tabs Content (All, High, Medium, Low) */}
         {['all', 'high', 'medium', 'low'].map((tab) => (
           <TabsContent key={tab} value={tab} className="space-y-6">
             <Card className="bg-primary-medium/30 border-accent-blue/20">

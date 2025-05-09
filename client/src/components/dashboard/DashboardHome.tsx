@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link } from 'wouter';
+import { Link, useLocation } from 'wouter';
 import { 
   Search, 
   BarChart3, 
@@ -114,6 +114,7 @@ const recentScans: Scan[] = [
 ];
 
 const DashboardHome: React.FC = () => {
+  const [, setLocation] = useLocation();
   // Use our custom hooks to fetch real data
   const { data: stats, isLoading: isLoadingStats, error: statsError } = useDashboardStats();
   const { data: recentScans, isLoading: isLoadingScans, error: scansError } = useRecentScans(5);
@@ -144,6 +145,10 @@ const DashboardHome: React.FC = () => {
     }
   };
   
+  const handleStartScan = () => {
+    setLocation('/dashboard/scans');
+  };
+
   return (
     <div className="space-y-6">
       {/* Page Header */}
@@ -151,16 +156,19 @@ const DashboardHome: React.FC = () => {
         <div>
           <h1 className="text-2xl md:text-3xl font-bold">Dashboard</h1>
           {/* Subscription Plan Badge */}
-          {stats?.subscription?.tier && (
+          {stats && stats.subscription && stats.subscription.tier && (
             <div className="flex justify-center my-2">
               <TierBadge tier={stats.subscription.tier} large />
             </div>
           )}
           <p className="text-gray-400">Overview of your security scans and vulnerabilities</p>
         </div>
-        <Button className="bg-accent-blue hover:bg-accent-blue/90 text-white">
+        <Button 
+          className="bg-accent-blue hover:bg-accent-blue/90 text-white"
+          onClick={handleStartScan}
+        >
           <Search className="mr-2 h-4 w-4" />
-          New Scan
+          Start Security Scan
         </Button>
       </div>
 
@@ -424,9 +432,11 @@ const DashboardHome: React.FC = () => {
               </p>
             </div>
             <div className="flex-shrink-0">
-              <Button variant="outline" className="border-accent-blue/50 text-accent-blue hover:bg-accent-blue/10">
-                Learn More
-              </Button>
+              <Link href="/blog/1">
+                <Button variant="outline" className="border-accent-blue/50 text-accent-blue hover:bg-accent-blue/10">
+                  Learn More
+                </Button>
+              </Link>
             </div>
           </div>
         </CardContent>

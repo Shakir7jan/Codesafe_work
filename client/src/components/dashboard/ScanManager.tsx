@@ -119,7 +119,7 @@ const ScanManager: React.FC = () => {
   const [apiImportUrl, setApiImportUrl] = useState('');
   const [customPolicy, setCustomPolicy] = useState('');
   const [contextAuth, setContextAuth] = useState('');
-  const [authType, setAuthType] = useState<'none' | 'form' | 'json'>('none');
+  const [authType, setAuthType] = useState<'none' | 'form' | 'json' | 'session-replay'>('none');
   const [authConfig, setAuthConfig] = useState<{ [key: string]: any }>({});
 
   // Fetch initial data
@@ -286,8 +286,35 @@ const ScanManager: React.FC = () => {
       });
       return;
     }
+
     let parsedContextAuth = undefined;
-    if (authType === 'json') {
+    if (authType === 'form') {
+      if (!authConfig.loginUrl || !authConfig.usernameField || !authConfig.passwordField || !authConfig.successPattern || !authConfig.username || !authConfig.password) {
+        setScanError({
+          title: "Missing Auth Config",
+          message: "Please fill in all authentication fields"
+        });
+        toast({
+          title: "Error",
+          description: "Please fill in all authentication fields",
+          variant: "destructive"
+        });
+        return;
+      }
+      parsedContextAuth = {
+        authType: "form",
+        loginUrl: authConfig.loginUrl,
+        loginRequestData: {
+          [authConfig.usernameField]: authConfig.username,
+          [authConfig.passwordField]: authConfig.password
+        },
+        loginPageValidationRegex: authConfig.successPattern,
+        credentials: {
+          username: authConfig.username,
+          password: authConfig.password
+        }
+      };
+    } else if (authType === 'json') {
       if (!contextAuth) {
         setScanError({
           title: "Missing Auth Config",
@@ -314,6 +341,39 @@ const ScanManager: React.FC = () => {
         });
         return;
       }
+    } else if (authType === 'session-replay') {
+      if (!authConfig.cookies && !authConfig.headers) {
+        setScanError({
+          title: "Missing Session Data",
+          message: "Please provide cookies and/or headers for session replay."
+        });
+        toast({
+          title: "Error",
+          description: "Please provide cookies and/or headers for session replay.",
+          variant: "destructive"
+        });
+        return;
+      }
+      let parsedHeaders = {};
+      try {
+        parsedHeaders = authConfig.headers ? JSON.parse(authConfig.headers) : {};
+      } catch (e) {
+        setScanError({
+          title: "Invalid Headers JSON",
+          message: "Headers must be valid JSON."
+        });
+        toast({
+          title: "Error",
+          description: "Headers must be valid JSON.",
+          variant: "destructive"
+        });
+        return;
+      }
+      parsedContextAuth = {
+        authType: 'session-replay',
+        cookies: authConfig.cookies,
+        headers: parsedHeaders
+      };
     }
     setIsLoading(true);
     try {
@@ -607,55 +667,128 @@ const ScanManager: React.FC = () => {
                               </label>
                               <Select
                                 value={authType}
-                                onValueChange={(value) => setAuthType(value as 'none' | 'form' | 'json')}
+                                onValueChange={(value) => {
+                                  setAuthType(value as 'none' | 'form' | 'json' | 'session-replay');
+                                  setContextAuth(''); // Clear previous config when changing type
+                                }}
                               >
                                 <SelectTrigger className="bg-white/10 border-accent-blue/20 text-white">
                                   <SelectValue placeholder="Select authentication type" />
                                 </SelectTrigger>
                                 <SelectContent className="bg-primary-medium border-accent-blue/20 text-white">
-                                  <SelectItem value="none">None</SelectItem>
-                                  <SelectItem value="form">Form-based</SelectItem>
-                                  <SelectItem value="json">JSON-based</SelectItem>
+                                  <SelectItem value="none">No Authentication</SelectItem>
+                                  <SelectItem value="form">Form-based Login</SelectItem>
+                                  <SelectItem value="json">API/JSON Authentication</SelectItem>
+                                  <SelectItem value="session-replay">Session Replay (Paste Cookies/Headers)</SelectItem>
                                 </SelectContent>
                               </Select>
-                              {authType === 'json' && (
-                                <div className="space-y-1 mt-2">
-                                  <label htmlFor="context-auth" className="text-sm text-gray-300 flex items-center">
-                                    Context/Auth Config (JSON)
-                                    <div className="ml-1 relative group">
+                              {authType !== 'none' && (
+                                <div className="space-y-3 mt-3 p-4 bg-white/5 rounded-lg border border-accent-blue/20">
+                                  <div className="flex items-center justify-between">
+                                    <h4 className="text-sm font-medium text-gray-200">
+                                      {authType === 'form' ? 'Form-based Authentication' : authType === 'json' ? 'API Authentication' : 'Session Replay'}
+                                    </h4>
+                                    <div className="relative group">
                                       <span className="cursor-help text-gray-400">ⓘ</span>
-                                      <div className="absolute bottom-full left-0 mb-2 w-96 p-2 bg-gray-800 rounded-md text-xs shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity z-50">
-                                        <p className="font-medium mb-1">Auth Config Format Examples:</p>
-                                        <p className="mb-1"><strong>OWASP Juice Shop:</strong></p>
-                                        <pre className="bg-gray-900 p-1 rounded text-xs overflow-auto">
-{`{
-  "authType": "form",
-  "loginUrl": "http://localhost:3000/rest/user/login",
-  "loginRequestData": {"email":"admin@juice-sh.op","password":"admin123"},
-  "loginPageValidationRegex": "\\\\{\\\"authentication\\\":\\\\{\\\"token\\\":\\\"(.*?)\\\"",
-  "credentials": {
-    "username": "admin@juice-sh.op",
-    "password": "admin123"
-  },
-  "headers": {
-    "Content-Type": "application/json"
-  }
-}`}
-                                        </pre>
+                                      <div className="absolute bottom-full right-0 mb-2 w-96 p-3 bg-gray-800 rounded-md text-xs shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity z-50">
+                                        <p className="font-medium mb-2">Authentication Guide:</p>
+                                        <p className="mb-2">For form-based authentication, provide:</p>
+                                        <ul className="list-disc list-inside space-y-1 text-gray-300">
+                                          <li>Login URL: The page where users enter credentials</li>
+                                          <li>Username field: The name of the username/email input field</li>
+                                          <li>Password field: The name of the password input field</li>
+                                          <li>Success pattern: Text that appears after successful login</li>
+                                        </ul>
                                       </div>
                                     </div>
-                                  </label>
-                                  <Input
-                                    id="context-auth"
-                                    placeholder='{"authType":"form","loginUrl":"http://localhost:3000/rest/user/login"...}'
-                                    className="bg-white/10 border-accent-blue/20 text-white placeholder:text-gray-500 font-mono text-xs"
-                                    value={contextAuth}
-                                    onChange={e => setContextAuth(e.target.value)}
-                                  />
-                                  <p className="text-xs text-gray-400">Enterprise: Authenticated/context-aware scans</p>
-                                  {contextAuth.includes("'") && (
-                                    <p className="text-amber-400 text-xs">Note: Use double quotes (") instead of single quotes (') for valid JSON</p>
-                                  )}
+                                  </div>
+                                  
+                                  {authType === 'form' ? (
+                                    <div className="space-y-3">
+                                      <div className="space-y-2">
+                                        <label className="text-sm text-gray-300">Login URL</label>
+                                        <Input
+                                          placeholder="https://example.com/login"
+                                          className="bg-white/10 border-accent-blue/20 text-white"
+                                          value={authConfig.loginUrl || ''}
+                                          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAuthConfig({...authConfig, loginUrl: e.target.value})}
+                                        />
+                                      </div>
+                                      
+                                      <div className="grid grid-cols-2 gap-3">
+                                        <div className="space-y-2">
+                                          <label className="text-sm text-gray-300">Username Field Name</label>
+                                          <Input
+                                            placeholder="username, email, etc."
+                                            className="bg-white/10 border-accent-blue/20 text-white"
+                                            value={authConfig.usernameField || ''}
+                                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAuthConfig({...authConfig, usernameField: e.target.value})}
+                                          />
+                                        </div>
+                                        <div className="space-y-2">
+                                          <label className="text-sm text-gray-300">Password Field Name</label>
+                                          <Input
+                                            placeholder="password"
+                                            className="bg-white/10 border-accent-blue/20 text-white"
+                                            value={authConfig.passwordField || ''}
+                                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAuthConfig({...authConfig, passwordField: e.target.value})}
+                                          />
+                                        </div>
+                                      </div>
+                                      
+                                      <div className="space-y-2">
+                                        <label className="text-sm text-gray-300">Success Pattern</label>
+                                        <Input
+                                          placeholder={'<a href="logout.jsp">Logout</a>'}
+                                          className="bg-white/10 border-accent-blue/20 text-white"
+                                          value={authConfig.successPattern || ''}
+                                          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAuthConfig({...authConfig, successPattern: e.target.value})}
+                                        />
+                                        <p className="text-xs text-gray-400">
+                                          HTML element that appears after successful login (e.g., logout link)
+                                        </p>
+                                      </div>
+
+                                      <div className="space-y-2">
+                                        <label className="text-sm text-gray-300">Username</label>
+                                        <Input
+                                          placeholder="test@gmail.com"
+                                          className="bg-white/10 border-accent-blue/20 text-white"
+                                          value={authConfig.username || ''}
+                                          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAuthConfig({...authConfig, username: e.target.value})}
+                                        />
+                                      </div>
+
+                                      <div className="space-y-2">
+                                        <label className="text-sm text-gray-300">Password</label>
+                                        <Input
+                                          type="password"
+                                          placeholder="Enter password"
+                                          className="bg-white/10 border-accent-blue/20 text-white"
+                                          value={authConfig.password || ''}
+                                          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAuthConfig({...authConfig, password: e.target.value})}
+                                        />
+                                      </div>
+                                    </div>
+                                  ) : authType === 'session-replay' ? (
+                                    <div className="space-y-2">
+                                      <label className="text-sm text-gray-300">Paste Cookies (as sent in browser)</label>
+                                      <Input
+                                        placeholder="sessionid=abc123; csrftoken=xyz456"
+                                        className="bg-white/10 border-accent-blue/20 text-white"
+                                        value={authConfig.cookies || ''}
+                                        onChange={e => setAuthConfig({ ...authConfig, cookies: e.target.value })}
+                                      />
+                                      <label className="text-sm text-gray-300 mt-2">Paste Headers (JSON format)</label>
+                                      <Input
+                                        placeholder='{"Authorization": "Bearer ..."}'
+                                        className="bg-white/10 border-accent-blue/20 text-white"
+                                        value={authConfig.headers || ''}
+                                        onChange={e => setAuthConfig({ ...authConfig, headers: e.target.value })}
+                                      />
+                                      <p className="text-xs text-gray-400">Paste cookies and/or headers from your authenticated browser session.</p>
+                                    </div>
+                                  ) : null}
                                 </div>
                               )}
                             </div>
